@@ -19,6 +19,7 @@ namespace MultiplayerClient
         public byte myId;
         public TCP tcp;
         public UDP udp;
+        public int team;
 
         public bool isConnected;
         
@@ -323,12 +324,15 @@ namespace MultiplayerClient
                 { (int) ServerPackets.TextureRequest, ClientHandle.HandleTextureRequest },
                 { (int) ServerPackets.DestroyPlayer, ClientHandle.DestroyPlayer },
                 { (int) ServerPackets.PvPEnabled, ClientHandle.PvPEnabled },
+                { (int) ServerPackets.TeamsEnabled, ClientHandle.TeamsEnabled },
                 { (int) ServerPackets.PlayerPosition, ClientHandle.PlayerPosition },
                 { (int) ServerPackets.PlayerScale, ClientHandle.PlayerScale },
                 { (int) ServerPackets.PlayerAnimation, ClientHandle.PlayerAnimation },
                 { (int) ServerPackets.HealthUpdated, ClientHandle.HealthUpdated },
                 { (int) ServerPackets.CharmsUpdated, ClientHandle.CharmsUpdated },
                 { (int) ServerPackets.PlayerDisconnected, ClientHandle.PlayerDisconnected },
+                { (int) ServerPackets.Team, ClientHandle.Team},
+                { (int) ServerPackets.Chat, ClientHandle.Chat},
                 { (int) ServerPackets.DisconnectPlayer, ClientHandle.DisconnectSelf },
             };
             

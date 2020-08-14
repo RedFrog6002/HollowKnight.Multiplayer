@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using HutongGames.PlayMaker.Actions;
+using IL.TMPro;
 using ModCommon;
 using ModCommon.Util;
 using UnityEngine;
+using TMPro;
 
 namespace MultiplayerClient
 {
@@ -28,7 +30,10 @@ namespace MultiplayerClient
         
         public byte id;
         public string username;
+        public int team = 0;
+        public TMPro.TextMeshPro chattext;
 
+        
         public static string activeScene;
         
         public bool equippedCharm_1;

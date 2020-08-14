@@ -107,7 +107,9 @@ namespace MultiplayerServer
                 {
                     packet.Write(player.GetAttr<Player, bool>("equippedCharm_" + charmNum));
                 }
+                packet.Write(player.team);
                 packet.Write(ServerSettings.PvPEnabled);
+                packet.Write(ServerSettings.TeamsEnabled);
 
                 Log("Player texture hashes length: " + player.textureHashes.Count);
                 foreach(var hash in player.textureHashes)
@@ -156,7 +158,39 @@ namespace MultiplayerServer
                 SendTCPDataToAll(packet);
             }
         }
-        
+
+        public static void TeamsEnabled()
+        {
+            using (Packet packet = new Packet((int)ServerPackets.TeamsEnabled))
+            {
+                packet.Write(ServerSettings.TeamsEnabled);
+
+                SendTCPDataToAll(packet);
+            }
+        }
+
+        public static void Team(byte id, int team)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.Team))
+            {
+                packet.Write(id);
+                packet.Write(team);
+
+                SendTCPDataToAll(packet);
+            }
+        }
+
+        public static void Chat(byte id, string message)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.Chat))
+            {
+                packet.Write(id);
+                packet.Write(message);
+
+                SendTCPDataToAll(packet);
+            }
+        }
+
         public static void PlayerPosition(Player player)
         {
             using (Packet packet = new Packet((int) ServerPackets.PlayerPosition))

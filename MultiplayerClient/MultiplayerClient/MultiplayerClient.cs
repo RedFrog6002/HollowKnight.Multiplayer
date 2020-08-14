@@ -1,11 +1,15 @@
 ﻿using System;
-using System.IO;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Modding;
 using MultiplayerClient.Canvas;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using TMPro;
+using ModCommon.Util;
 
 namespace MultiplayerClient
 {
@@ -79,8 +83,89 @@ namespace MultiplayerClient
             ModHooks.Instance.CharmUpdateHook += OnCharmUpdate;
             ModHooks.Instance.ApplicationQuitHook += OnApplicationQuit;
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnSceneChanged;
+            On.HeroController.Start += HeroController_Start;
+            On.HeroController.TakeDamage += HeroController_TakeDamage;
+            On.HeroController.Update += HeroController_Update;
         }
 
+        private void HeroController_Update(On.HeroController.orig_Update orig, HeroController self)
+        {
+            orig(self);
+            if (SessionManager.Instance.TeamsEnabled)
+            {
+                switch (Client.Instance.team)
+                {
+                    case 1:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.red;
+                        break;
+                    case 2:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.blue;
+                        break;
+                    case 3:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.yellow;
+                        break;
+                    case 4:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.green;
+                        break;
+                }
+            }
+        }
+
+        private void HeroController_TakeDamage(On.HeroController.orig_TakeDamage orig, HeroController self, GameObject go, GlobalEnums.CollisionSide damageSide, int damageAmount, int hazardType)
+        {
+            orig(self, go, damageSide, damageAmount, hazardType);
+            if (SessionManager.Instance.TeamsEnabled)
+            {
+                switch (Client.Instance.team)
+                {
+                    case 1:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.red;
+                        break;
+                    case 2:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.blue;
+                        break;
+                    case 3:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.yellow;
+                        break;
+                    case 4:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.green;
+                        break;
+                }
+            }
+        }
+
+        private void HeroController_Start(On.HeroController.orig_Start orig, HeroController self)
+        {
+            orig(self);
+            GameObject nameObj = UnityEngine.Object.Instantiate(new GameObject("Username"), self.transform.position + Vector3.up * 1.25f,
+                Quaternion.identity);
+            nameObj.transform.SetParent(self.transform);
+            nameObj.transform.SetScaleX(0.25f);
+            nameObj.transform.SetScaleY(0.25f);
+            TextMeshPro nameText = nameObj.AddComponent<TextMeshPro>();
+            nameText.text = base.GlobalSettings.username;
+            nameText.alignment = TextAlignmentOptions.Center;
+            nameText.fontSize = 24;
+            nameText.outlineColor = Color.black;
+            nameText.outlineWidth = 0.1f;
+            nameObj.AddComponent<KeepWorldScalePositive>();
+            GameObject chatObj = UnityEngine.Object.Instantiate(new GameObject("Chattext"), self.transform.position + Vector3.up * 2f,
+                 Quaternion.identity);
+            chatObj.transform.SetParent(self.transform);
+            chatObj.transform.SetScaleX(0.25f);
+            chatObj.transform.SetScaleY(0.25f);
+            TextMeshPro chatText = chatObj.AddComponent<TextMeshPro>();
+            chatText.text = "Chat Text";
+            chatText.alignment = TextAlignmentOptions.Center;
+            chatText.fontSize = 24;
+            chatText.outlineColor = Color.black;
+            chatText.outlineWidth = 0.1f;
+            chatObj.AddComponent<KeepWorldScalePositive>();
+            heroname = nameText;
+            herochat = chatText;
+        }
+        public TMPro.TextMeshPro heroname;
+        public TMPro.TextMeshPro herochat;
         private void OnApplicationQuit()
         {
             SaveGlobalSettings();

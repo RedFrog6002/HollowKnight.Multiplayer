@@ -14,17 +14,23 @@ namespace MultiplayerClient.Canvas
         public static CanvasPanel Panel;
         public static CanvasButton ConnectButton;
         public static CanvasText ConnectionInfo;
+        public static CanvasButton TeamButton;
+        public static CanvasButton SendButton;
 
         private static CanvasInput _ipInput;
         private static CanvasInput _portInput;
         private static CanvasInput _usernameInput;
+        private static CanvasInput _chatInput;
 
         public static void BuildMenu(GameObject canvas)
         {
             Texture2D buttonImg = GUIController.Instance.images["Button_BG"];
             Texture2D inputImg = GUIController.Instance.images["Input_BG"];
             Texture2D panelImg = GUIController.Instance.images["Panel_BG"];
-            
+            Texture2D teamImg = GUIController.Instance.images["Team_BG"];
+            Texture2D chatImg = GUIController.Instance.images["Chat_BG"];
+            Texture2D sendImg = GUIController.Instance.images["Send_BG"];
+
             float x = Screen.width / 2.0f - inputImg.width / 2.0f - 30.0f;
             float y = 30.0f;
 
@@ -97,7 +103,32 @@ namespace MultiplayerClient.Canvas
                 16
             );
             y += inputImg.height + 5;
-            
+
+            /*Panel.AddText(
+                "Team Text",
+                "Teams",
+                new Vector2(x, y),
+                new Vector2(buttonImg.width, buttonImg.height),
+                GUIController.Instance.trajanNormal,
+                24,
+                FontStyle.Bold,
+                TextAnchor.MiddleCenter
+            );
+            y += buttonImg.height + 10;*/
+
+            TeamButton = Panel.AddButton(
+                "Team Button",
+                teamImg,
+                new Vector2(x, y),
+                Vector2.zero,
+                ToggleTeam,
+                new Rect(0, y, teamImg.width, teamImg.height),
+                GUIController.Instance.trajanNormal,
+                "None",
+                16
+            );
+            y += teamImg.height + 5;
+
             ConnectButton = Panel.AddButton(
                 "Connect Button",
                 buttonImg,
@@ -111,6 +142,29 @@ namespace MultiplayerClient.Canvas
             );
             y += buttonImg.height;
 
+            _chatInput = Panel.AddInput(
+                "Chat Input",
+                chatImg,
+                new Vector2(x - 25, y),
+                Vector2.zero,
+                new Rect(0, y, chatImg.width, chatImg.height),
+                GUIController.Instance.trajanNormal,
+                "", "Chat",
+                16
+            );
+
+            SendButton = Panel.AddButton(
+                "Send Button",
+                sendImg,
+                new Vector2(x + chatImg.width - 23, y),
+                Vector2.zero,
+                SendMessage,
+                new Rect(0, y, sendImg.width, sendImg.height),
+                GUIController.Instance.trajanNormal,
+                "",
+                16
+            );
+            y += chatImg.height + 5;
 
             ConnectionInfo = new CanvasText(
                 canvas,
@@ -166,6 +220,55 @@ namespace MultiplayerClient.Canvas
             else
             {
                 ConnectToServer();
+            }
+        }
+        private static void SendMessage(string buttonName)
+        {
+            if (Client.Instance.isConnected)
+            {
+                Log(_chatInput.GetText());
+                ClientSend.Chat(Client.Instance.myId, _chatInput.GetText());
+            }
+            MultiplayerClient.Instance.herochat.text = _chatInput.GetText();
+        }
+            private static void ToggleTeam(string buttonName)
+        {
+            if (SessionManager.Instance.TeamsEnabled)
+            {
+                Client.Instance.team++;
+                if (Client.Instance.team != 1 && Client.Instance.team != 2 && Client.Instance.team != 3 && Client.Instance.team != 4)
+            {
+                Log("Team Was not an known amount");
+                Client.Instance.team = 1;
+            }
+            Log("Button pressed");
+                switch (Client.Instance.team)
+                {
+                    case 1:
+                        HeroController.instance.gameObject.GetComponent<tk2dSpriteAnimator>().Sprite.color = Color.red;
+                        TeamButton.UpdateText("Red");
+                        Log("Red");
+                        break;
+                    case 2:
+                        HeroController.instance.gameObject.GetComponent<tk2dSpriteAnimator>().Sprite.color = Color.blue;
+                        TeamButton.UpdateText("Blue");
+                        Log("blue");
+                        break;
+                    case 3:
+                        HeroController.instance.gameObject.GetComponent<tk2dSpriteAnimator>().Sprite.color = Color.yellow;
+                        TeamButton.UpdateText("Yellow");
+                        Log("yellow");
+                        break;
+                    case 4:
+                        HeroController.instance.gameObject.GetComponent<tk2dSpriteAnimator>().Sprite.color = Color.green;
+                        TeamButton.UpdateText("Green");
+                        Log("green");
+                        break;
+                }
+            }
+            if (Client.Instance.isConnected)
+            {
+                ClientSend.Team(Client.Instance.myId, Client.Instance.team);
             }
         }
 

@@ -43,10 +43,13 @@ namespace MultiplayerClient
                 {    
                     charmsData.Add(packet.ReadBool());
                 }
+                int team = packet.ReadInt();
 
                 bool pvpEnabled = packet.ReadBool();
+                bool teamsEnabled = packet.ReadBool();
                 SessionManager.Instance.EnablePvP(pvpEnabled);
-                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData);
+                SessionManager.Instance.EnableTeams(teamsEnabled);
+                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData, team);
                     
                 var player = SessionManager.Instance.Players[id];
                 /*foreach (TextureType tt in Enum.GetValues(typeof(TextureType)))
@@ -236,7 +239,14 @@ namespace MultiplayerClient
 
             SessionManager.Instance.EnablePvP(enablePvP);
         }
-            
+
+        public static void TeamsEnabled(Packet packet)
+        {
+            bool enableTeams = packet.ReadBool();
+
+            SessionManager.Instance.EnableTeams(enableTeams);
+        }
+
         public static void PlayerPosition(Packet packet)
         {
             byte id = packet.ReadByte();
@@ -312,7 +322,27 @@ namespace MultiplayerClient
             Log("Disconnecting Self");
             Client.Instance.Disconnect();
         }
-        
+
+        public static void Team(Packet packet)
+        {
+            byte id = packet.ReadByte();
+            int team = packet.ReadInt();
+            Log($"Player {id} has teamed.");
+
+            SessionManager.Instance.TeamPlayer(id, team);
+        }
+
+        public static void Chat(Packet packet)
+        {
+            Log("suspicious teritory");
+            Byte id = packet.ReadByte();
+            Log("byte read");
+            String message = packet.ReadString();
+            Log($"Player {id} has chated.");
+            Log(message);
+            SessionManager.Instance.Chat(id, message);
+        }
+
         private static void Log(object message) => Modding.Logger.Log("[Client Handle] " + message);
     }
 }

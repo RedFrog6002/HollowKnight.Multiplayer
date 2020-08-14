@@ -29,7 +29,8 @@ namespace MultiplayerServer
             {
                 charmsData.Add(packet.ReadBool());
             }
-            
+            int team = packet.ReadInt();
+
             if (isHost)
             {
                 foreach (Client client in Server.clients.Values)
@@ -45,7 +46,7 @@ namespace MultiplayerServer
                 }
             }
 
-            Server.clients[fromClient].SendIntoGame(username, position, scale, currentClip, health, maxHealth, healthBlue, charmsData, isHost);
+            Server.clients[fromClient].SendIntoGame(username, position, scale, currentClip, health, maxHealth, healthBlue, charmsData, isHost, team);
             
             /*for (int i = 0; i < Enum.GetNames(typeof(TextureType)).Length; i++)
             {
@@ -225,6 +226,22 @@ namespace MultiplayerServer
             Object.Destroy(Server.clients[id].player.gameObject);
             Server.clients[id].player = null;
             Server.clients[id].Disconnect();
+        }
+
+        public static void Team(byte fromClient, Packet packet)
+        {
+            byte id = packet.ReadByte();
+            int team = packet.ReadInt();
+
+            ServerSend.Team(id, team);
+        }
+
+        public static void Chat(byte fromClient, Packet packet)
+        {
+            byte id = packet.ReadByte();
+            string message = packet.ReadString();
+
+            ServerSend.Chat(id, message);
         }
 
         public static void SyncEnemy(byte fromClient, Packet packet)

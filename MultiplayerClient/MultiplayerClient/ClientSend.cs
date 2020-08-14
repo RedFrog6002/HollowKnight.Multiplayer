@@ -45,6 +45,7 @@ namespace MultiplayerClient
                 {
                     packet.Write(PlayerData.instance.GetAttr<PlayerData, bool>("equippedCharm_" + charmNum));
                 }
+                packet.Write(Client.Instance.team);
 
                 /*foreach (var hash in textureHashes)
                 {
@@ -151,10 +152,30 @@ namespace MultiplayerClient
                 SendTCPData(packet);
             }
         }
-        
+        public static void Team(byte id, int team)
+        {
+            using (Packet packet = new Packet((int)ClientPackets.Team))
+            {
+                packet.Write(id);
+                packet.Write(team);
+
+                SendTCPData(packet);
+            }
+        }
+        public static void Chat(byte id, string message)
+        {
+            using (Packet packet = new Packet((int)ClientPackets.Chat))
+            {
+                packet.Write(id);
+                packet.Write(message);
+
+                SendTCPData(packet);
+            }
+        }
+
         #endregion Player Packets
 
-        # region Enemy Packets
+        #region Enemy Packets
 
         public static void SyncEnemy(byte toClient, string goName)
         {
