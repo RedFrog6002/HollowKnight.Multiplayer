@@ -79,6 +79,36 @@ namespace MultiplayerClient
             ModHooks.Instance.CharmUpdateHook += OnCharmUpdate;
             ModHooks.Instance.ApplicationQuitHook += OnApplicationQuit;
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnSceneChanged;
+<<<<<<< Updated upstream
+=======
+            On.HeroController.Start += HeroController_Start;
+            On.HeroController.TakeDamage += HeroController_TakeDamage;
+            On.HeroController.Update += HeroController_Update;
+            string s CustomKnight.CustomKnight.Instance.GlobalSettings.DefaultSkin;
+        }
+
+        private void HeroController_Update(On.HeroController.orig_Update orig, HeroController self)
+        {
+            orig(self);
+            if (SessionManager.Instance.TeamsEnabled)
+            {
+                switch (Client.Instance.team)
+                {
+                    case 1:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.red;
+                        break;
+                    case 2:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.blue;
+                        break;
+                    case 3:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.yellow;
+                        break;
+                    case 4:
+                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.green;
+                        break;
+                }
+            }
+>>>>>>> Stashed changes
         }
 
         private void OnApplicationQuit()

@@ -28,7 +28,15 @@ namespace MultiplayerClient
         
         public byte id;
         public string username;
+<<<<<<< Updated upstream
 
+=======
+        public int team = 0;
+        public TMPro.TextMeshPro chattext;
+        public string chat;
+        public string SkinName;
+        
+>>>>>>> Stashed changes
         public static string activeScene;
         
         public bool equippedCharm_1;
