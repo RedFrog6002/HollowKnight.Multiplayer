@@ -104,6 +104,7 @@ namespace MultiplayerServer
                 packet.Write(player.position);
                 packet.Write(player.scale);
                 packet.Write(player.animation);
+                packet.Write(player.activeScene);
                 for (int charmNum = 1; charmNum <= 40; charmNum++)
                 {
                     packet.Write(player.GetAttr<Player, bool>("equippedCharm_" + charmNum));

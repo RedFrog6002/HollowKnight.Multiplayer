@@ -47,7 +47,7 @@ namespace MultiplayerClient
         /// <param name="scale">The player's starting scale.</param>
         /// <param name="animation">The starting animation of the spawned player.</param>
         /// <param name="charmsData">List of bools containing charms equipped.</param>
-        public void SpawnPlayer(byte id, string username, Vector3 position, Vector3 scale, string animation, List<bool> charmsData, int team)
+        public void SpawnPlayer(byte id, string username, Vector3 position, Vector3 scale, string animation, List<bool> charmsData, int team, string scene)
         {
             Log("spawnpl");
             // Prevent duplication of same player, leaving one idle
@@ -151,6 +151,7 @@ namespace MultiplayerClient
             playerManager.id = id;
             playerManager.username = username;
             playerManager.chattext = chatText;
+            playerManager.activeScene = scene;
             for (int charmNum = 1; charmNum <= 40; charmNum++)
             {
                 playerManager.SetAttr("equippedCharm_" + charmNum, charmsData[charmNum - 1]);

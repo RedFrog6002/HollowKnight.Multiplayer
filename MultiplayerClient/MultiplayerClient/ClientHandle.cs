@@ -39,6 +39,7 @@ namespace MultiplayerClient
                 Vector3 position = packet.ReadVector3();
                 Vector3 scale = packet.ReadVector3();
                 string animation = packet.ReadString();
+                string scenename = packet.ReadString();
                 List<bool> charmsData = new List<bool>();
                 for (int charmNum = 1; charmNum <= 40; charmNum++)
                 {    
@@ -50,7 +51,7 @@ namespace MultiplayerClient
                 bool teamsEnabled = packet.ReadBool();
                 SessionManager.Instance.EnablePvP(pvpEnabled);
                 SessionManager.Instance.EnableTeams(teamsEnabled);
-                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData, team);
+                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData, team, scenename);
                     
                 var player = SessionManager.Instance.Players[id];
                 /*foreach (TextureType tt in Enum.GetValues(typeof(TextureType)))

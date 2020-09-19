@@ -222,6 +222,7 @@ namespace MultiplayerClient
         };
         private void OnSceneChanged(Scene prevScene, Scene nextScene)
         {
+            PlayerManager.Instance.activeScene = nextScene.name;
             if (Client.Instance.isConnected)
             {
                 bool otherplayer = false;

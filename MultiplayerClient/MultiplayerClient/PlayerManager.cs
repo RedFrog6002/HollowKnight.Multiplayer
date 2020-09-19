@@ -33,7 +33,7 @@ namespace MultiplayerClient
         public int team = 0;
         public TMPro.TextMeshPro chattext;
 
-        
+
         public string activeScene;
         public bool CurrentRoomSyncHost;
         
