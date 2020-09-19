@@ -17,7 +17,7 @@ namespace MultiplayerServer.Canvas
             float toggleHeight = 30;
             
             float x = Screen.width / 2.0f - panelImg.width / 2.0f - 30.0f;
-            float y = 200.0f;
+            float y = 200.0f + 35f;
 
             if (!GameObject.Find("EventSystem"))
             {
@@ -66,7 +66,22 @@ namespace MultiplayerServer.Canvas
                 16
             );
             y += toggleHeight;
-            
+
+            _pvpToggle = Panel.AddToggle(
+                "Toggle Teams",
+                GUIController.Instance.images["Toggle_BG"],
+                GUIController.Instance.images["Checkmark"],
+                new Vector2(x, y),
+                new Vector2(panelImg.width, 20),
+                new Vector2(-60, 0),
+                new Rect(0, 0, 150, 20),
+                ToggleTeams,
+                GUIController.Instance.trajanNormal,
+                "Enable Teams",
+                16
+            );
+            y += toggleHeight;
+
             Panel.AddToggle(
                 "Toggle Spectator",
                 GUIController.Instance.images["Toggle_BG"],
@@ -141,7 +156,23 @@ namespace MultiplayerServer.Canvas
                 ServerSend.PvPEnabled();
             }
         }
-        
+
+        private static void ToggleTeams(bool toggleValue)
+        {
+            if (toggleValue)
+            {
+                Log("Teams Enabled");
+                ServerSettings.TeamsEnabled = true;
+                ServerSend.TeamsEnabled();
+            }
+            else
+            {
+                Log("Teams Disabled");
+                ServerSettings.TeamsEnabled = false;
+                ServerSend.TeamsEnabled();
+            }
+        }
+
         private static void ToggleSpectator(bool toggleValue)
         {
             if (toggleValue)

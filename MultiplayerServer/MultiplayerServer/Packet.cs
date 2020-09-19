@@ -14,17 +14,20 @@ namespace MultiplayerServer
         TextureRequest,
         DestroyPlayer,
         PvPEnabled,
+        TeamsEnabled,
         PlayerPosition,
         PlayerScale,
         PlayerAnimation,
         HealthUpdated,
         CharmsUpdated,
         PlayerDisconnected,
+        Team,
+        Chat,
         DisconnectPlayer,
         SyncEnemy,
         EnemyPosition,
         EnemyScale,
-        EnemyAnimation,
+        EnemyAnimation
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -40,6 +43,8 @@ namespace MultiplayerServer
         HealthUpdated,
         CharmsUpdated,
         PlayerDisconnected,
+        Team,
+        Chat,
         SyncEnemy,
         EnemyPosition,
         EnemyScale,

@@ -27,7 +27,7 @@ namespace MultiplayerServer
         public static int Port { get; private set; }
         public static Dictionary<int, Client> clients = new Dictionary<int, Client>();
         public delegate void PacketHandler(byte fromClient, Packet packet);
-        
+
         public static Dictionary<int, EnemyTracker> Enemies = new Dictionary<int, EnemyTracker>();
 
         public static Dictionary<int, PacketHandler> PacketHandlers;
@@ -148,6 +148,8 @@ namespace MultiplayerServer
                 { (int) ClientPackets.HealthUpdated, ServerHandle.HealthUpdated },
                 { (int) ClientPackets.CharmsUpdated, ServerHandle.CharmsUpdated },
                 { (int) ClientPackets.PlayerDisconnected, ServerHandle.PlayerDisconnected },
+                { (int) ClientPackets.Team, ServerHandle.Team },
+                { (int) ClientPackets.Chat, ServerHandle.Chat },
                 { (int) ClientPackets.SyncEnemy, ServerHandle.SyncEnemy },
                 { (int) ClientPackets.EnemyPosition, ServerHandle.EnemyPosition },
                 { (int) ClientPackets.EnemyScale, ServerHandle.EnemyScale },

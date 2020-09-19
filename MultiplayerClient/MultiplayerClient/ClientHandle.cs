@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using HutongGames.PlayMaker.Actions;
@@ -43,10 +44,13 @@ namespace MultiplayerClient
                 {    
                     charmsData.Add(packet.ReadBool());
                 }
+                int team = packet.ReadInt();
 
                 bool pvpEnabled = packet.ReadBool();
+                bool teamsEnabled = packet.ReadBool();
                 SessionManager.Instance.EnablePvP(pvpEnabled);
-                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData);
+                SessionManager.Instance.EnableTeams(teamsEnabled);
+                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData, team);
                     
                 var player = SessionManager.Instance.Players[id];
                 /*foreach (TextureType tt in Enum.GetValues(typeof(TextureType)))
@@ -226,8 +230,34 @@ namespace MultiplayerClient
         public static void DestroyPlayer(Packet packet)
         {
             byte clientToDestroy = packet.ReadByte();
+            bool amnewhost = packet.ReadBool();
 
             SessionManager.Instance.DestroyPlayer(clientToDestroy);
+            if (amnewhost && !PlayerManager.Instance.CurrentRoomSyncHost)
+            {
+                MultiplayerClient.Enemies.Clear();
+                GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                if (enemies != null)
+                {
+                    for (int i = 0; i <= enemies.Length; i++)
+                    {
+                        try
+                        {
+                            if (enemies[i] != null)
+                            {
+                                var enemy = enemies[i];
+                                var e = enemy.AddComponent<EnemyTracker>();
+                                e.enemyId = i;
+                                MultiplayerClient.Enemies.Add(i, enemy);
+                            }
+                        }
+                        catch (NullReferenceException e)
+                        {
+                            MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                        }
+                    }
+                }
+            }
         }
 
         public static void PvPEnabled(Packet packet)
@@ -236,7 +266,14 @@ namespace MultiplayerClient
 
             SessionManager.Instance.EnablePvP(enablePvP);
         }
-            
+
+        public static void TeamsEnabled(Packet packet)
+        {
+            bool enableTeams = packet.ReadBool();
+
+            SessionManager.Instance.EnableTeams(enableTeams);
+        }
+
         public static void PlayerPosition(Packet packet)
         {
             byte id = packet.ReadByte();
@@ -303,14 +340,116 @@ namespace MultiplayerClient
         {
             byte id = packet.ReadByte();
             Log($"Player {id} has disconnected from the server.");
-    
+            bool newhost = packet.ReadBool();
             SessionManager.Instance.DestroyPlayer(id);
+            if (newhost)
+            {
+                MultiplayerClient.Enemies.Clear();
+                GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                if (enemies != null)
+                {
+                    for (int i = 0; i <= enemies.Length; i++)
+                    {
+                        try
+                        {
+                            if (enemies[i] != null)
+                            {
+                                var enemy = enemies[i];
+                                var e = enemy.AddComponent<EnemyTracker>();
+                                e.enemyId = i;
+                                MultiplayerClient.Enemies.Add(i, enemy);
+                            }
+                        }
+                        catch (NullReferenceException e)
+                        {
+                            MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                        }
+                    }
+                }
+            }
         }
 
         public static void DisconnectSelf(Packet packet)
         {
             Log("Disconnecting Self");
             Client.Instance.Disconnect();
+        }
+
+        public static void Team(Packet packet)
+        {
+            byte id = packet.ReadByte();
+            int team = packet.ReadInt();
+            Log($"Player {id} has teamed.");
+
+            //SessionManager.Instance.TeamPlayer(id, team);
+        }
+
+        public static void Chat(Packet packet)
+        {
+            Log("suspicious teritory");
+            Byte id = packet.ReadByte();
+            Log("byte read");
+            String message = packet.ReadString();
+            Log($"Player {id} has chated.");
+            Log(message);
+            SessionManager.Instance.Chat(id, message);
+        }
+
+        public static void SyncEnemy(Packet packet)
+        {
+            string goName = packet.ReadString();
+            int id = packet.ReadInt();
+            if (!PlayerManager.Instance.CurrentRoomSyncHost)
+            {
+                GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                if (enemies != null)
+                {
+                    try
+                    {
+                        if (enemies[id] != null)
+                        {
+                            var enemy = enemies[id];
+                            if (enemy.name == goName)
+                            {
+                                //var e = enemy.AddComponent<EnemyTracker>();
+                                //e.enemyId = i;
+                                MultiplayerClient.Enemies.Add(id, enemy);
+                            }
+                        }
+                    }
+                    catch (NullReferenceException e)
+                    {
+                        MultiplayerClient.Instance.Log("Object in enemies found null:  " + id + "    " + e);
+                    }
+                }
+            }
+        }
+
+        public static void EnemyPosition(Packet packet)
+        {
+            Vector3 position = packet.ReadVector3();
+            int id = packet.ReadInt();
+
+            MultiplayerClient.Enemies[id].transform.SetPosition3D(position.x, position.y, position.z);
+        }
+
+        public static void EnemyScale(Packet packet)
+        {
+            Vector3 scale = packet.ReadVector3();
+            int id = packet.ReadInt();
+
+            MultiplayerClient.Enemies[id].transform.SetPosition3D(scale.x, scale.y, scale.z);
+        }
+
+        public static void EnemyAnimation(Packet packet)
+        {
+            string animation = packet.ReadString();
+            int id = packet.ReadInt();
+            if (MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>())
+            {
+                MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>().Stop();
+                MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>().Play(animation);
+            }
         }
 
         private static void Log(object message) => Modding.Logger.Log("[Client Handle] " + message);

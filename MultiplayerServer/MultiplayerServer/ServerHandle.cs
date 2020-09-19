@@ -33,7 +33,8 @@ namespace MultiplayerServer
             {
                 charmsData.Add(packet.ReadBool());
             }
-            
+            int team = packet.ReadInt();
+
             if (isHost)
             {
                 foreach (Client client in Server.clients.Values)
@@ -49,8 +50,8 @@ namespace MultiplayerServer
                 }
             }
 
-            Server.clients[fromClient].SendIntoGame(username, position, scale, currentClip, health, maxHealth, healthBlue, charmsData, isHost);
-            
+            Server.clients[fromClient].SendIntoGame(username, position, scale, currentClip, health, maxHealth, healthBlue, charmsData, isHost, team);
+
             /*for (int i = 0; i < Enum.GetNames(typeof(TextureType)).Length; i++)
             {
                 byte[] hash = packet.ReadBytes(20);
@@ -66,8 +67,14 @@ namespace MultiplayerServer
                     ServerSend.RequestTexture(fromClient, hash);
                 }
             }*/
-            
-            SceneChanged(fromClient, activeScene);
+
+            bool otherplayer = false;
+            foreach (Client c in Server.clients.Values)
+            {
+                if (c.player.activeScene == activeScene)
+                    otherplayer = true;
+            }
+            SceneChanged(fromClient, activeScene, otherplayer);
             
             Log($"{username} connected successfully and is now player {fromClient}.");
             if (fromClient != clientIdCheck)
@@ -146,11 +153,11 @@ namespace MultiplayerServer
         public static void SceneChanged(byte fromClient, Packet packet)
         {
             string sceneName = packet.ReadString();
-            
+            string oldscene = Server.clients[fromClient].player.activeScene;
             Server.clients[fromClient].player.activeScene = sceneName;
-
+            bool first = true;
             for (byte i = 1; i <= Server.MaxPlayers; i++)    
-            {    
+            {
                 if (Server.clients[i].player != null && i != fromClient)
                 {
                     if (Server.clients[i].player.activeScene == sceneName)
@@ -163,8 +170,18 @@ namespace MultiplayerServer
                     }
                     else
                     {
-                        Log("Different Scene, Destroying Players");
-                        ServerSend.DestroyPlayer(i, fromClient);
+
+                        if (first && Server.clients[i].player.activeScene == oldscene)
+                        {
+                            Log("Different Scene, Destroying Players And Changing room host");
+                            ServerSend.DestroyPlayer(i, fromClient, true);
+                            first = false;
+                        }
+                        else
+                        {
+                            Log("Different Scene, Destroying Players");
+                            ServerSend.DestroyPlayer(i, fromClient, false);
+                        }
                         //ServerSend.DestroyPlayer(fromClient, i);
                     }
                 }
@@ -174,9 +191,10 @@ namespace MultiplayerServer
         /// <summary>Initial scene load when joining the server for the first time.</summary>
         /// <param name="fromClient">The ID of the client who joined the server</param>
         /// <param name="sceneName">The name of the client's active scene when joining the server</param>
-        public static void SceneChanged(byte fromClient, string sceneName)
+        public static void SceneChanged(byte fromClient, string sceneName, bool roomhost)
         {
             Server.clients[fromClient].player.activeScene = sceneName;
+            Server.clients[fromClient].player.CurrentRoomSyncHost = roomhost;
 
             for (byte i = 1; i <= Server.MaxPlayers; i++)
             {
@@ -231,6 +249,21 @@ namespace MultiplayerServer
             Server.clients[id].Disconnect();
         }
 
+        public static void Team(byte fromClient, Packet packet)
+        {
+            byte id = packet.ReadByte();
+            int team = packet.ReadInt();
+
+            ServerSend.Team(id, team);
+        }
+
+        public static void Chat(byte fromClient, Packet packet)
+        {
+            byte id = packet.ReadByte();
+            string message = packet.ReadString();
+
+            ServerSend.Chat(id, message);
+        }
         public static void LoadServerScene(byte fromClient, Packet packet)
         {
             string sceneName = packet.ReadString();
@@ -239,14 +272,14 @@ namespace MultiplayerServer
 
             IEnumerator LoadSceneRoutine()
             {
-                Scene scene = USceneManager.GetSceneByName(sceneName); 
+                Scene scene = USceneManager.GetSceneByName(sceneName);
                 if (!scene.isLoaded)
                 {
                     AsyncOperation operation = USceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
-                
-                    yield return new WaitWhile(() => !operation.isDone);    
+
+                    yield return new WaitWhile(() => !operation.isDone);
                 }
-                
+
                 Scene loadedScene = USceneManager.GetSceneByName(sceneName);
                 GameObject[] rootGOs = loadedScene.GetRootGameObjects();
                 if (rootGOs != null)
@@ -272,7 +305,7 @@ namespace MultiplayerServer
                         else
                         {
                             tracker = enemy.AddComponent<EnemyTracker>();
-                            ServerSend.SyncEnemy(fromClient, enemy.name);
+                            ServerSend.SyncEnemy(fromClient, enemy.name, tracker.enemyId);
                             tracker.playerIds.Add(fromClient);
                         }
 
@@ -299,50 +332,59 @@ namespace MultiplayerServer
                                     break;
                                 }
                             }
-                        }   
+                        }
                     }
                 }
             }
         }
-        
+
+
         public static void SyncEnemy(byte fromClient, Packet packet)
         {
-            if (!Server.clients[fromClient].player.isHost) return;
-
+            //if (!Server.clients[fromClient].player.isHost) return;
             byte toClient = packet.ReadByte();
-            string goName = packet.ReadString();
+            if ((Server.clients[fromClient].player.activeScene == Server.clients[toClient].player.activeScene)) return;
 
-            ServerSend.SyncEnemy(toClient, goName);
+            string goName = packet.ReadString();
+            int id = packet.ReadInt();
+
+            ServerSend.SyncEnemy(toClient, goName, id);
         }
         
         public static void EnemyPosition(byte fromClient, Packet packet)
         {
-            if (!Server.clients[fromClient].player.isHost) return;
-
+            //if (!Server.clients[fromClient].player.isHost) return;
             byte toClient = packet.ReadByte();
-            Vector3 position = packet.ReadVector3();
+            if (Server.clients[fromClient].player.activeScene == Server.clients[toClient].player.activeScene) return;
 
-            ServerSend.EnemyPosition(toClient, position);
+            Vector3 position = packet.ReadVector3();
+            int id = packet.ReadInt();
+
+            ServerSend.EnemyPosition(toClient, position, id);
         }
 
         public static void EnemyScale(byte fromClient, Packet packet)
         {
-            if (!Server.clients[fromClient].player.isHost) return;
-            
+            //if (!Server.clients[fromClient].player.isHost) return;
             byte toClient = packet.ReadByte();
-            Vector3 scale = packet.ReadVector3();
+            if (Server.clients[fromClient].player.activeScene != Server.clients[toClient].player.activeScene) return;
 
-            ServerSend.EnemyScale(toClient, scale);
+            Vector3 scale = packet.ReadVector3();
+            int id = packet.ReadInt();
+
+            ServerSend.EnemyScale(toClient, scale, id);
         }
         
         public static void EnemyAnimation(byte fromClient, Packet packet)
         {
-            if (!Server.clients[fromClient].player.isHost) return;
-            
+            //if (!Server.clients[fromClient].player.isHost) return;
             byte toClient = packet.ReadByte();
-            string clipName = packet.ReadString();
+            if (Server.clients[fromClient].player.activeScene != Server.clients[toClient].player.activeScene) return;
 
-            ServerSend.EnemyAnimation(toClient, clipName);
+            string animation = packet.ReadString();
+            int id = packet.ReadInt();
+
+            ServerSend.EnemyAnimation(toClient, animation, id);
         }
         
         private static void Log(object message) => Modding.Logger.Log("[Server Handle] " + message);

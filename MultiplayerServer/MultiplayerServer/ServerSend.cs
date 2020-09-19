@@ -72,7 +72,7 @@ namespace MultiplayerServer
                 }
             }
         }
-        
+
         public static void Welcome(byte toClient, string msg)
         {
             using (Packet packet = new Packet((int) ServerPackets.Welcome))
@@ -108,7 +108,9 @@ namespace MultiplayerServer
                 {
                     packet.Write(player.GetAttr<Player, bool>("equippedCharm_" + charmNum));
                 }
+                packet.Write(player.team);
                 packet.Write(ServerSettings.PvPEnabled);
+                packet.Write(ServerSettings.TeamsEnabled);
 
                 Log("Player texture hashes length: " + player.textureHashes.Count);
                 foreach(var hash in player.textureHashes)
@@ -138,11 +140,12 @@ namespace MultiplayerServer
         
         #endregion CustomKnight Integration
         
-        public static void DestroyPlayer(byte toClient, int clientToDestroy)
+        public static void DestroyPlayer(byte toClient, int clientToDestroy, bool newhost)
         {
             using (Packet packet = new Packet((int) ServerPackets.DestroyPlayer))
             {
                 packet.Write(clientToDestroy);
+                packet.Write(newhost);
 
                 SendTCPData(toClient, packet);
             }
@@ -157,7 +160,39 @@ namespace MultiplayerServer
                 SendTCPDataToAll(packet);
             }
         }
-        
+
+        public static void TeamsEnabled()
+        {
+            using (Packet packet = new Packet((int)ServerPackets.TeamsEnabled))
+            {
+                packet.Write(ServerSettings.TeamsEnabled);
+
+                SendTCPDataToAll(packet);
+            }
+        }
+
+        public static void Team(byte id, int team)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.Team))
+            {
+                packet.Write(id);
+                packet.Write(team);
+
+                SendTCPDataToAll(packet);
+            }
+        }
+
+        public static void Chat(byte id, string message)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.Chat))
+            {
+                packet.Write(id);
+                packet.Write(message);
+
+                SendTCPDataToAll(packet);
+            }
+        }
+
         public static void PlayerPosition(Player player)
         {
             using (Packet packet = new Packet((int) ServerPackets.PlayerPosition))
@@ -219,14 +254,34 @@ namespace MultiplayerServer
             }
         }
 
-        public static void PlayerDisconnected(byte playerId)
+        public static void PlayerDisconnected(byte playerId, string scene)
         {
-            using (Packet packet = new Packet((int) ServerPackets.PlayerDisconnected))
+            bool first = true;
+            foreach (Client c in Server.clients.Values)
             {
-                packet.Write(playerId);
+                if (c.player.id != playerId && c.player.activeScene == scene && first)
+                {
+                    first = false;
+                    using (Packet packet = new Packet((int)ServerPackets.PlayerDisconnected))
+                    {
+                        packet.Write(playerId);
+                        packet.Write(true);
 
-                Log("Sending Disconnect Packet to all clients but " + playerId);
-                SendTCPDataToAll(playerId, packet); 
+                        Log("Sending Disconnect Packet to all clients but " + playerId);
+                        //SendTCPDataToAll(playerId, packet); 
+                    }
+                }
+                else
+                {
+                    using (Packet packet = new Packet((int)ServerPackets.PlayerDisconnected))
+                    {
+                        packet.Write(playerId);
+                        packet.Write(false);
+
+                        Log("Sending Disconnect Packet to all clients but " + playerId);
+                        //SendTCPDataToAll(playerId, packet); 
+                    }
+                }
             }
         }
 
@@ -238,42 +293,45 @@ namespace MultiplayerServer
                 SendTCPData(playerId, packet);
             }
         }
-
-        public static void SyncEnemy(byte toClient, string goName)
+        public static void SyncEnemy(byte toClient, string goName, int id)
         {
-            using (Packet packet = new Packet((int) ServerPackets.SyncEnemy))
+            using (Packet packet = new Packet((int)ServerPackets.SyncEnemy))
             {
                 packet.Write(goName);
+                packet.Write(id);
 
                 SendTCPData(toClient, packet);
             }
         }
-        
-        public static void EnemyPosition(byte toClient, Vector3 position)
+
+        public static void EnemyPosition(byte toClient, Vector3 position, int id)
         {
-            using (Packet packet = new Packet((int) ServerPackets.EnemyPosition))
+            using (Packet packet = new Packet((int)ServerPackets.EnemyPosition))
             {
                 packet.Write(position);
+                packet.Write(id);
 
                 SendTCPData(toClient, packet);
             }
         }
-        
-        public static void EnemyScale(byte toClient, Vector3 scale)
+
+        public static void EnemyScale(byte toClient, Vector3 scale, int id)
         {
-            using (Packet packet = new Packet((int) ServerPackets.EnemyScale))
+            using (Packet packet = new Packet((int)ServerPackets.EnemyScale))
             {
                 packet.Write(scale);
+                packet.Write(id);
 
                 SendTCPData(toClient, packet);
             }
         }
-        
-        public static void EnemyAnimation(byte toClient, string clipName)
+
+        public static void EnemyAnimation(byte toClient, string clipName, int id)
         {
-            using (Packet packet = new Packet((int) ServerPackets.EnemyAnimation))
+            using (Packet packet = new Packet((int)ServerPackets.EnemyAnimation))
             {
                 packet.Write(clipName);
+                packet.Write(id);
 
                 SendTCPData(toClient, packet);
             }

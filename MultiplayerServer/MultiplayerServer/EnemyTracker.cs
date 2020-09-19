@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace MultiplayerServer
@@ -7,10 +7,10 @@ namespace MultiplayerServer
     {
         public List<byte> playerIds;
         public int enemyId;
-        
+
         private tk2dSpriteAnimator _anim;
         private HealthManager _hm;
-        
+
         private void Awake()
         {
             _anim = GetComponent<tk2dSpriteAnimator>();
@@ -31,7 +31,7 @@ namespace MultiplayerServer
                         clip.frames[0] = frame0;
                     }
                 }
-                
+
                 _anim.AnimationEventTriggered = AnimationEventDelegate;
             }
 
@@ -40,7 +40,7 @@ namespace MultiplayerServer
                 _hm.hp *= 2;
             }
         }
-        
+
         private Vector3 _storedPosition = Vector3.zero;
         private Vector3 _storedScale = Vector3.zero;
         private void FixedUpdate()
@@ -48,18 +48,20 @@ namespace MultiplayerServer
             Vector3 pos = transform.position;
             if (pos != _storedPosition)
             {
-                ServerSend.EnemyPosition(pos);
+                foreach (byte player in playerIds)
+                    ServerSend.EnemyPosition(player, pos, enemyId);
                 _storedPosition = pos;
             }
 
             Vector3 scale = transform.localScale;
             if (scale != _storedScale)
             {
-                ServerSend.EnemyScale(scale);
+                foreach (byte player in playerIds)
+                    ServerSend.EnemyScale(player, scale, enemyId);
                 _storedScale = scale;
             }
         }
-        
+
         private string _storedClip;
         private void AnimationEventDelegate(tk2dSpriteAnimator anim, tk2dSpriteAnimationClip clip, int frameNum)
         {
@@ -71,7 +73,9 @@ namespace MultiplayerServer
                 tk2dSpriteAnimationFrame frame = clip.GetFrame(frameNum);
 
                 string clipName = frame.eventInfo;
-                ServerSend.EnemyAnimation(clipName);
+                //ServerSend.EnemyAnimation(clipName);
+                foreach (byte player in playerIds)
+                    ServerSend.EnemyAnimation(player, clipName, enemyId);
             }
         }
     }

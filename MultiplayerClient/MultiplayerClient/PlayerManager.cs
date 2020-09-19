@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using HutongGames.PlayMaker.Actions;
+using IL.TMPro;
 using ModCommon;
 using ModCommon.Util;
 using UnityEngine;
+using TMPro;
 
 namespace MultiplayerClient
 {
@@ -28,16 +30,12 @@ namespace MultiplayerClient
         
         public byte id;
         public string username;
-<<<<<<< Updated upstream
-
-=======
         public int team = 0;
         public TMPro.TextMeshPro chattext;
-        public string chat;
-        public string SkinName;
+
         
->>>>>>> Stashed changes
-        public static string activeScene;
+        public string activeScene;
+        public bool CurrentRoomSyncHost;
         
         public bool equippedCharm_1;
         public bool equippedCharm_2;

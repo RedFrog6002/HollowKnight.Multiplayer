@@ -34,7 +34,7 @@ namespace MultiplayerClient
                 packet.Write(MultiplayerClient.settings.username);
                 packet.Write(isHost);
                 packet.Write(HeroController.instance.GetComponent<tk2dSpriteAnimator>().CurrentClip.name);
-                packet.Write(PlayerManager.activeScene);
+                packet.Write(PlayerManager.Instance.activeScene);
                 packet.Write(heroTransform.position);
                 packet.Write(heroTransform.localScale);
                 packet.Write(PlayerData.instance.health);
@@ -45,6 +45,7 @@ namespace MultiplayerClient
                 {
                     packet.Write(PlayerData.instance.GetAttr<PlayerData, bool>("equippedCharm_" + charmNum));
                 }
+                packet.Write(Client.Instance.team);
 
                 /*foreach (var hash in textureHashes)
                 {
@@ -107,12 +108,13 @@ namespace MultiplayerClient
             }
         }
 
-        public static void SceneChanged(string sceneName)
+        public static void SceneChanged(string sceneName, bool otherplayer)
         {
             using (Packet packet = new Packet((int) ClientPackets.SceneChanged))
             {
                 packet.Write(sceneName);
-                
+                packet.Write(otherplayer);
+
                 SendTCPData(packet);
             }
         }
@@ -151,46 +153,72 @@ namespace MultiplayerClient
                 SendTCPData(packet);
             }
         }
-        
+        public static void Team(byte id, int team)
+        {
+            using (Packet packet = new Packet((int)ClientPackets.Team))
+            {
+                packet.Write(id);
+                packet.Write(team);
+
+                SendTCPData(packet);
+            }
+        }
+        public static void Chat(byte id, string message)
+        {
+            using (Packet packet = new Packet((int)ClientPackets.Chat))
+            {
+                packet.Write(id);
+                packet.Write(message);
+
+                SendTCPData(packet);
+            }
+        }
+
         #endregion Player Packets
 
-        # region Enemy Packets
+        #region Enemy Packets
 
-        public static void SyncEnemy(byte toClient, string goName)
+        public static void SyncEnemy(byte toClient, string goName, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.SyncEnemy))
             {
                 packet.Write(toClient);
                 packet.Write(goName);
+                packet.Write(id);
 
                 SendTCPData(packet);
             }
         }
         
-        public static void EnemyPosition(Vector3 position)
+        public static void EnemyPosition(byte toClient, Vector3 position, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.EnemyPosition))
             {
+                packet.Write(toClient);
                 packet.Write(position);
-                
+                packet.Write(id);
+
                 SendUDPData(packet);
             }
         }
         
-        public static void EnemyScale(Vector3 scale)
+        public static void EnemyScale(byte toClient, Vector3 scale, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.EnemyScale))
             {
+                packet.Write(toClient);
                 packet.Write(scale);
-                
+                packet.Write(id);
+
                 SendUDPData(packet);
             }
         }
         
-        public static void EnemyAnimation(string clipName)
+        public static void EnemyAnimation(byte toClient, string clipName, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.EnemyAnimation))
             {
+                packet.Write(toClient);
                 packet.Write(clipName);
                 
                 SendUDPData(packet);

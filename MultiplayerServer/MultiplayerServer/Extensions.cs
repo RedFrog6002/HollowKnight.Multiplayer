@@ -64,7 +64,7 @@ namespace MultiplayerServer
             {
                 enemies.Add(gameObject);
             }
-            
+
             foreach (Transform childTransform in gameObject.transform)
             {
                 GameObject child = childTransform.gameObject;
@@ -81,7 +81,7 @@ namespace MultiplayerServer
                     enemies.Add(descendant);
                 }
             }
-            
+
             return enemies;
         }
     }

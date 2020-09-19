@@ -35,9 +35,6 @@
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="CustomKnight">
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Mods\CustomKnight.dll</HintPath>
-    </Reference>
     <Reference Include="ModCommon, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Mods\ModCommon.dll</HintPath>
     </Reference>
@@ -110,16 +107,16 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Images\Button_BG.png" />
-    <EmbeddedResource Include="Images\Panel_BG.png" />
-  </ItemGroup>
-  <ItemGroup>
+    <EmbeddedResource Include="Images\Chat_BG.png" />
     <EmbeddedResource Include="Images\Input_BG.png" />
+    <EmbeddedResource Include="Images\Panel_BG.png" />
+    <EmbeddedResource Include="Images\Send_BG.png" />
+    <EmbeddedResource Include="Images\Team_BG.png" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="@echo on" />
     <Exec Command="echo Copying mod" />
     <Exec Command="copy &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Mods\&quot;" />
-    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(USERPROFILE)\OneDrive\Documents\&quot;" />
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

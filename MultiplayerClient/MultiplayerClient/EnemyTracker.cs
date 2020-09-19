@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace MultiplayerClient
 {
@@ -6,7 +7,8 @@ namespace MultiplayerClient
     {
         private tk2dSpriteAnimator _anim;
         private HealthManager _hm;
-        
+        public int enemyId;
+
         private void Awake()
         {
             _anim = GetComponent<tk2dSpriteAnimator>();
@@ -17,7 +19,7 @@ namespace MultiplayerClient
         {
             foreach (byte toClient in SessionManager.Instance.Players.Keys)
             {
-                ClientSend.SyncEnemy(toClient, gameObject.name);
+                ClientSend.SyncEnemy(toClient, gameObject.name, enemyId);
             }
 
             if (_anim != null)
@@ -46,18 +48,19 @@ namespace MultiplayerClient
         private Vector3 _storedScale = Vector3.zero;
         private void FixedUpdate()
         {
-            
             Vector3 pos = transform.position;
             if (pos != _storedPosition)
             {
-                ClientSend.EnemyPosition(pos);
+                foreach (byte player in SessionManager.Instance.Players.Keys)
+                    ClientSend.EnemyPosition(player, pos, enemyId);
                 _storedPosition = pos;
             }
 
             Vector3 scale = transform.localScale;
             if (scale != _storedScale)
             {
-                ClientSend.EnemyScale(scale);
+                foreach (byte player in SessionManager.Instance.Players.Keys)
+                    ClientSend.EnemyScale(player, scale, enemyId);
                 _storedScale = scale;
             }
         }
@@ -65,7 +68,6 @@ namespace MultiplayerClient
         private string _storedClip;
         private void AnimationEventDelegate(tk2dSpriteAnimator anim, tk2dSpriteAnimationClip clip, int frameNum)
         {
-            
             if (clip.wrapMode == tk2dSpriteAnimationClip.WrapMode.Loop && clip.name != _storedClip ||
                 clip.wrapMode == tk2dSpriteAnimationClip.WrapMode.LoopSection && clip.name != _storedClip ||
                 clip.wrapMode == tk2dSpriteAnimationClip.WrapMode.Once)
@@ -74,7 +76,8 @@ namespace MultiplayerClient
                 tk2dSpriteAnimationFrame frame = clip.GetFrame(frameNum);
 
                 string clipName = frame.eventInfo;
-                ClientSend.EnemyAnimation(clipName);
+                foreach (byte player in SessionManager.Instance.Players.Keys)
+                    ClientSend.EnemyAnimation(player, clipName, enemyId);
             }
         }
     }

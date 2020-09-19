@@ -230,10 +230,10 @@ namespace MultiplayerServer
         /// <param name="maxHealth">The maximum health of the new player.</param>
         /// <param name="healthBlue">The blue health of the new player.</param>
         /// <param name="charmsData">The equipped charms of the new player.</param>
-        public void SendIntoGame(string username, Vector3 position, Vector3 scale, string animation, int health, int maxHealth, int healthBlue, List<bool> charmsData, bool isHost)
+        public void SendIntoGame(string username, Vector3 position, Vector3 scale, string animation, int health, int maxHealth, int healthBlue, List<bool> charmsData, bool isHost, int team)
         {
             player = NetworkManager.Instance.InstantiatePlayer(position, scale);
-            player.Initialize(id, username, animation, health, maxHealth, healthBlue, isHost);
+            player.Initialize(id, username, animation, health, maxHealth, healthBlue, isHost, team);
 
             for (int charmNum = 1; charmNum <= 40; charmNum++)
             {
@@ -247,7 +247,7 @@ namespace MultiplayerServer
         public void Disconnect()
         {
             Log($"{tcp.socket.Client.RemoteEndPoint} has disconnected from the server.");
-
+            string s = player.activeScene;
             ThreadManager.ExecuteOnMainThread(() =>
             {
                 UnityEngine.Object.Destroy(player.gameObject);
@@ -257,7 +257,7 @@ namespace MultiplayerServer
             tcp.Disconnect();
             udp.Disconnect();
             
-            ServerSend.PlayerDisconnected(id);
+            ServerSend.PlayerDisconnected(id, s);
             Log("Disconnected on Server Side.");
         }
 
