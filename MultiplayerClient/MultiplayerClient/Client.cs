@@ -338,6 +338,7 @@ namespace MultiplayerClient
                 { (int) ServerPackets.EnemyPosition, ClientHandle.EnemyPosition },
                 { (int) ServerPackets.EnemyScale, ClientHandle.EnemyScale },
                 { (int) ServerPackets.EnemyAnimation, ClientHandle.EnemyAnimation },
+                { (int) ServerPackets.StartEnemySync, ClientHandle.StartEnemySync },
             };
             
             Log("Initialized Packets.");

@@ -232,10 +232,11 @@ namespace MultiplayerClient
         {
             byte clientToDestroy = packet.ReadByte();
             bool amnewhost = packet.ReadBool();
-
+            Log(amnewhost);
             SessionManager.Instance.DestroyPlayer(clientToDestroy);
             if (amnewhost && !PlayerManager.Instance.CurrentRoomSyncHost)
             {
+                Log("clearing enemies");
                 MultiplayerClient.Enemies.Clear();
                 GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
                 if (enemies != null)
@@ -246,8 +247,9 @@ namespace MultiplayerClient
                         {
                             if (enemies[i] != null)
                             {
+                                Log("adding enemy");
                                 var enemy = enemies[i];
-                                var e = enemy.AddComponent<EnemyTracker>();
+                                var e = enemy.GetOrAddComponent<EnemyTracker>();
                                 e.enemyId = i;
                                 MultiplayerClient.Enemies.Add(i, enemy);
                             }
@@ -450,6 +452,31 @@ namespace MultiplayerClient
             {
                 MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>().Stop();
                 MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>().Play(animation);
+            }
+        }
+        public static void StartEnemySync(Packet packet)
+        {
+            MultiplayerClient.Enemies.Clear();
+            GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+            if (enemies != null)
+            {
+                for (int i = 0; i <= enemies.Length; i++)
+                {
+                    try
+                    {
+                        if (enemies[i] != null)
+                        {
+                            var enemy = enemies[i];
+                            var e = enemy.AddComponent<EnemyTracker>();
+                            e.enemyId = i;
+                            MultiplayerClient.Enemies.Add(i, enemy);
+                        }
+                    }
+                    catch (NullReferenceException e)
+                    {
+                        MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                    }
+                }
             }
         }
 

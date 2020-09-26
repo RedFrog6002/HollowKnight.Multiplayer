@@ -337,6 +337,15 @@ namespace MultiplayerServer
                 SendTCPData(toClient, packet);
             }
         }
+        public static void StartEnemySync(byte toClient, bool NewHost)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.StartEnemySync))
+            {
+                packet.Write(NewHost);
+
+                SendTCPData(toClient, packet);
+            }
+        }
 
         private static void Log(object message) => Modding.Logger.Log("[Server Send] " + message);
     }

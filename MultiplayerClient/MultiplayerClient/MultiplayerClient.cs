@@ -225,7 +225,7 @@ namespace MultiplayerClient
             PlayerManager.Instance.activeScene = nextScene.name;
             if (Client.Instance.isConnected)
             {
-                bool otherplayer = false;
+                /*bool otherplayer = false;
                 if (SessionManager.Instance.Players.Values != null)
                 {
                     foreach (PlayerManager pm in SessionManager.Instance.Players.Values)
@@ -233,13 +233,13 @@ namespace MultiplayerClient
                         if (pm.activeScene == nextScene.name)
                             otherplayer = true;
                     }
-                }
+                }*/
                 if (!NonGameplayScenes.Contains(nextScene.name))
                 {
-                    ClientSend.SceneChanged(nextScene.name, otherplayer);
+                    ClientSend.SceneChanged(nextScene.name);
                 }
                 Enemies.Clear();
-                if (!otherplayer)
+                /*if (!otherplayer)
                 {
                     GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
                     if (enemies != null)
@@ -262,7 +262,7 @@ namespace MultiplayerClient
                             }
                         }
                     }
-                }
+                }*/
             }
             
             SessionManager.Instance.DestroyAllPlayers();

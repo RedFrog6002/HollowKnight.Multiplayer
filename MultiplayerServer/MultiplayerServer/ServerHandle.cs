@@ -69,10 +69,14 @@ namespace MultiplayerServer
             }*/
 
             bool otherplayer = false;
-            foreach (Client c in Server.clients.Values)
+            if (Server.clients.Count > 1)
             {
-                if (c.player.activeScene == activeScene)
-                    otherplayer = true;
+                foreach (Client c in Server.clients.Values)
+                {
+                    if (c.player == null) continue;
+                    if (c.player.activeScene == activeScene)
+                        otherplayer = true;
+                }
             }
             SceneChanged(fromClient, activeScene, otherplayer);
             
@@ -153,9 +157,11 @@ namespace MultiplayerServer
         public static void SceneChanged(byte fromClient, Packet packet)
         {
             string sceneName = packet.ReadString();
+            bool host = Server.clients[fromClient].player.CurrentRoomSyncHost;
             string oldscene = Server.clients[fromClient].player.activeScene;
             Server.clients[fromClient].player.activeScene = sceneName;
             bool first = true;
+            bool otherplayer = false;
             for (byte i = 1; i <= Server.MaxPlayers; i++)    
             {
                 if (Server.clients[i].player != null && i != fromClient)
@@ -167,11 +173,12 @@ namespace MultiplayerServer
                         Player fromPlayer = Server.clients[fromClient].player;
                         ServerSend.SpawnPlayer(fromClient, iPlayer);
                         ServerSend.SpawnPlayer(i, fromPlayer);
+                        otherplayer = true;
                     }
                     else
                     {
 
-                        if (first && Server.clients[i].player.activeScene == oldscene)
+                        if (first && Server.clients[i].player.activeScene == oldscene && host)
                         {
                             Log("Different Scene, Destroying Players And Changing room host");
                             ServerSend.DestroyPlayer(i, fromClient, true);
@@ -186,16 +193,24 @@ namespace MultiplayerServer
                     }
                 }
             }
+            if (!otherplayer && !host)
+            {
+                ServerSend.StartEnemySync(fromClient, true);
+            }
+            Server.clients[fromClient].player.CurrentRoomSyncHost = !otherplayer;
         }
 
         /// <summary>Initial scene load when joining the server for the first time.</summary>
         /// <param name="fromClient">The ID of the client who joined the server</param>
         /// <param name="sceneName">The name of the client's active scene when joining the server</param>
-        public static void SceneChanged(byte fromClient, string sceneName, bool roomhost)
+        public static void SceneChanged(byte fromClient, string sceneName, bool other)
         {
             Server.clients[fromClient].player.activeScene = sceneName;
-            Server.clients[fromClient].player.CurrentRoomSyncHost = roomhost;
-
+            Server.clients[fromClient].player.CurrentRoomSyncHost = !other;
+            if (!other)
+            {
+                ServerSend.StartEnemySync(fromClient, true);
+            }
             for (byte i = 1; i <= Server.MaxPlayers; i++)
             {
                 if (Server.clients[i].player != null && i != fromClient)

@@ -119,6 +119,17 @@ namespace MultiplayerClient
             }
         }
 
+        public static void SceneChanged(string sceneName)
+        {
+            using (Packet packet = new Packet((int)ClientPackets.SceneChanged))
+            {
+                packet.Write(sceneName);
+                packet.Write(false);
+
+                SendTCPData(packet);
+            }
+        }
+
         public static void HealthUpdated(int currentHealth, int currentMaxHealth, int currentHealthBlue)
         {
             using (Packet packet = new Packet((int) ClientPackets.HealthUpdated))

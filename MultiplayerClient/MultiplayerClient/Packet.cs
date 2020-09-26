@@ -28,6 +28,7 @@ namespace MultiplayerClient
         EnemyPosition,
         EnemyScale,
         EnemyAnimation,
+        StartEnemySync,
     }
 
     /// <summary>Sent from client to server.</summary>
