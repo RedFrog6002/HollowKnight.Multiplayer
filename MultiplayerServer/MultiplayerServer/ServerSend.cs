@@ -1,6 +1,10 @@
 ﻿using System;
 using HutongGames.PlayMaker.Actions;
 using ModCommon.Util;
+using UnityEngine;
+using MultiplayerServer.Canvas;
+using Modding.Patches;
+using Newtonsoft.Json;
 
 namespace MultiplayerServer
 {
@@ -71,7 +75,7 @@ namespace MultiplayerServer
                 }
             }
         }
-        
+
         public static void Welcome(byte toClient, string msg)
         {
             using (Packet packet = new Packet((int) ServerPackets.Welcome))
@@ -103,13 +107,16 @@ namespace MultiplayerServer
                 packet.Write(player.position);
                 packet.Write(player.scale);
                 packet.Write(player.animation);
+                packet.Write(player.activeScene);
                 for (int charmNum = 1; charmNum <= 40; charmNum++)
                 {
                     packet.Write(player.GetAttr<Player, bool>("equippedCharm_" + charmNum));
                 }
                 packet.Write(player.team);
+                packet.Write(player.chat);
                 packet.Write(ServerSettings.PvPEnabled);
                 packet.Write(ServerSettings.TeamsEnabled);
+                packet.Write(Server.wenabled);
 
                 Log("Player texture hashes length: " + player.textureHashes.Count);
                 foreach(var hash in player.textureHashes)
@@ -139,11 +146,12 @@ namespace MultiplayerServer
         
         #endregion CustomKnight Integration
         
-        public static void DestroyPlayer(byte toClient, int clientToDestroy)
+        public static void DestroyPlayer(byte toClient, int clientToDestroy, bool newhost)
         {
             using (Packet packet = new Packet((int) ServerPackets.DestroyPlayer))
             {
                 packet.Write(clientToDestroy);
+                packet.Write(newhost);
 
                 SendTCPData(toClient, packet);
             }
@@ -187,7 +195,7 @@ namespace MultiplayerServer
                 packet.Write(id);
                 packet.Write(message);
 
-                SendTCPDataToAll(packet);
+                SendTCPDataToAll(id, packet);
             }
         }
 
@@ -252,14 +260,34 @@ namespace MultiplayerServer
             }
         }
 
-        public static void PlayerDisconnected(byte playerId)
+        public static void PlayerDisconnected(byte playerId, string scene)
         {
-            using (Packet packet = new Packet((int) ServerPackets.PlayerDisconnected))
+            bool first = true;
+            foreach (Client c in Server.clients.Values)
             {
-                packet.Write(playerId);
+                if (c.player.id != playerId && c.player.activeScene == scene && first)
+                {
+                    first = false;
+                    using (Packet packet = new Packet((int)ServerPackets.PlayerDisconnected))
+                    {
+                        packet.Write(playerId);
+                        packet.Write(true);
 
-                Log("Sending Disconnect Packet to all clients but " + playerId);
-                SendTCPDataToAll(playerId, packet); 
+                        Log("Sending Disconnect Packet to all clients but " + playerId);
+                        //SendTCPDataToAll(playerId, packet); 
+                    }
+                }
+                else
+                {
+                    using (Packet packet = new Packet((int)ServerPackets.PlayerDisconnected))
+                    {
+                        packet.Write(playerId);
+                        packet.Write(false);
+
+                        Log("Sending Disconnect Packet to all clients but " + playerId);
+                        //SendTCPDataToAll(playerId, packet); 
+                    }
+                }
             }
         }
 
@@ -269,6 +297,159 @@ namespace MultiplayerServer
             using (Packet packet = new Packet((int) ServerPackets.DisconnectPlayer))
             { 
                 SendTCPData(playerId, packet);
+            }
+        }
+        public static void SyncEnemy(byte toClient, string goName, int id)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.SyncEnemy))
+            {
+                packet.Write(goName);
+                packet.Write(id);
+
+                SendTCPData(toClient, packet);
+            }
+        }
+
+        public static void EnemyPosition(byte toClient, Vector3 position, int id)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.EnemyPosition))
+            {
+                packet.Write(position);
+                packet.Write(id);
+
+                SendTCPData(toClient, packet);
+            }
+        }
+
+        public static void EnemyScale(byte toClient, Vector3 scale, int id)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.EnemyScale))
+            {
+                packet.Write(scale);
+                packet.Write(id);
+
+                SendTCPData(toClient, packet);
+            }
+        }
+
+        public static void EnemyAnimation(byte toClient, string clipName, int id)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.EnemyAnimation))
+            {
+                packet.Write(clipName);
+                packet.Write(id);
+
+                SendTCPData(toClient, packet);
+            }
+        }
+        public static void StartEnemySync(byte toClient, bool NewHost)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.StartEnemySync))
+            {
+                packet.Write(NewHost);
+
+                SendTCPData(toClient, packet);
+            }
+        }
+
+        public static void UpdatePlayerData(byte fromClient, PlayerDataTypes pdtype, string variable, object obj)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.PlayerDataChange))
+            {
+                packet.Write((int)pdtype);
+                packet.Write(variable);
+                switch (pdtype)
+                {
+                    case PlayerDataTypes.Bool:
+                        packet.Write((bool)obj);
+                        break;
+                    case PlayerDataTypes.Float:
+                        packet.Write((float)obj);
+                        break;
+                    case PlayerDataTypes.Int:
+                        packet.Write((int)obj);
+                        break;
+                    case PlayerDataTypes.Other:
+                        packet.Write((string)obj);
+                        break;
+                    case PlayerDataTypes.String:
+                        packet.Write((string)obj);
+                        break;
+                    case PlayerDataTypes.Vector3:
+                        packet.Write((Vector3)obj);
+                        break;
+                }
+                SendTCPDataToAll(fromClient, packet);
+            }
+        }
+
+        public static void SendPlayerData(byte toClient)
+        {
+            PlayerData world = PlayerData.instance;
+            if (world != null)
+            {
+                using (Packet packet = new Packet((int)ServerPackets.PlayerDataSend))
+                {
+                    packet.Write(Newtonsoft.Json.JsonConvert.SerializeObject(world, Formatting.Indented, new JsonSerializerSettings
+                    {
+                        ContractResolver = ShouldSerializeContractResolver.Instance,
+                        TypeNameHandling = TypeNameHandling.Auto
+                    }));
+                    SendTCPData(toClient, packet);
+                }
+            }
+        }
+
+        public static void PDEnabled(bool enabled)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.WorldEnabled))
+            {
+                packet.Write(enabled);
+                SendTCPDataToAll(packet);
+            }
+        }
+
+        public static void CreatePin(byte fromClient)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.CreatePin))
+            {
+                packet.Write(fromClient);
+                packet.Write(Server.clients[fromClient].player.username);
+                packet.Write(Server.clients[fromClient].player.pinenabled);
+                packet.Write(Server.clients[fromClient].player.pinposition);
+                SendTCPDataToAll(fromClient, packet);
+            }
+        }
+
+        public static void CreatePin(byte fromClient, byte toClient)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.CreatePin))
+            {
+                packet.Write(fromClient);
+                packet.Write(Server.clients[fromClient].player.username);
+                packet.Write(Server.clients[fromClient].player.pinenabled);
+                packet.Write(Server.clients[fromClient].player.pinposition);
+                SendTCPData(toClient, packet);
+            }
+        }
+
+        public static void StartPinSync(byte fromClient, bool enabled)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.StartPinSync))
+            {
+                packet.Write(fromClient);
+                packet.Write(enabled);
+                SendTCPDataToAll(fromClient, packet);
+            }
+        }
+
+        public static void PinPosition(byte fromClient, Vector3 position)
+        {
+            using (Packet packet = new Packet((int)ServerPackets.PinPosition))
+            {
+                packet.Write(fromClient);
+                packet.Write(position);
+                SendTCPDataToAll(fromClient, packet);
             }
         }
 

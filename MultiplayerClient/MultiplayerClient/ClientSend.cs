@@ -1,5 +1,9 @@
 ﻿using ModCommon.Util;
 using UnityEngine;
+using MultiplayerClient.Canvas;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MultiplayerClient
 {
@@ -34,7 +38,7 @@ namespace MultiplayerClient
                 packet.Write(MultiplayerClient.settings.username);
                 packet.Write(isHost);
                 packet.Write(HeroController.instance.GetComponent<tk2dSpriteAnimator>().CurrentClip.name);
-                packet.Write(PlayerManager.activeScene);
+                packet.Write(PlayerManager.Instance.activeScene);
                 packet.Write(heroTransform.position);
                 packet.Write(heroTransform.localScale);
                 packet.Write(PlayerData.instance.health);
@@ -45,7 +49,58 @@ namespace MultiplayerClient
                 {
                     packet.Write(PlayerData.instance.GetAttr<PlayerData, bool>("equippedCharm_" + charmNum));
                 }
+
+                // stolen from https://github.com/fifty-six/HollowKnight.Modding/blob/master/Assembly-CSharp/ModLoader.cs
+
+                string path = string.Empty;
+                if (SystemInfo.operatingSystem.Contains("Windows"))
+                {
+                    path = Application.dataPath + "\\Managed\\Mods";
+                }
+                else if (SystemInfo.operatingSystem.Contains("Mac"))
+                {
+                    path = Application.dataPath + "/Resources/Data/Managed/Mods/";
+                }
+                else if (SystemInfo.operatingSystem.Contains("Linux"))
+                {
+                    path = Application.dataPath + "/Managed/Mods";
+                }
+
+                string[] modPaths = Directory.GetFiles(path, "*.dll");
+
+                packet.Write(modPaths.Length);
+                foreach (string modPath in modPaths)
+                {
+                    string sendtext = Path.GetFileNameWithoutExtension(modPath);
+                    try
+                    {
+                        using (FileStream fs = new FileStream(modPath, FileMode.Open))
+                        using (BufferedStream bs = new BufferedStream(fs))
+                        {
+                            using (SHA1Managed sha1 = new SHA1Managed())
+                            {
+                                byte[] hash = sha1.ComputeHash(bs);
+                                StringBuilder formatted = new StringBuilder(2 * hash.Length);
+                                foreach (byte b in hash)
+                                {
+                                    formatted.AppendFormat("{0:X2}", b);
+                                }
+                                sendtext += "   Sha1 hash: " + formatted;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        sendtext += "   Failed to get Sha1 hash";
+                    }
+                    packet.Write(sendtext);
+                }
+                packet.Write(Modding.ModHooks.Instance.ModVersion);
+
                 packet.Write(Client.Instance.team);
+                packet.Write(MultiplayerClient.Instance.herochat.text);
+                packet.Write(SessionManager.Instance.SendPins);
+                packet.Write(HeroPin.instance.Position);
 
                 /*foreach (var hash in textureHashes)
                 {
@@ -108,12 +163,24 @@ namespace MultiplayerClient
             }
         }
 
-        public static void SceneChanged(string sceneName)
+        public static void SceneChanged(string sceneName, bool otherplayer)
         {
             using (Packet packet = new Packet((int) ClientPackets.SceneChanged))
             {
                 packet.Write(sceneName);
-                
+                packet.Write(otherplayer);
+
+                SendTCPData(packet);
+            }
+        }
+
+        public static void SceneChanged(string sceneName)
+        {
+            using (Packet packet = new Packet((int)ClientPackets.SceneChanged))
+            {
+                packet.Write(sceneName);
+                packet.Write(false);
+
                 SendTCPData(packet);
             }
         }
@@ -172,46 +239,131 @@ namespace MultiplayerClient
                 SendTCPData(packet);
             }
         }
+        public static void SendPDChange(PlayerDataTypes pdtype, string variable, object obj)
+        {
+            try
+            {
+                if (Client.Instance.isConnected && SessionManager.Instance.WSyncClientEnabled)
+                {
+                    using (Packet packet = new Packet((int)ClientPackets.PlayerDataChange))
+                    {
+                        packet.Write((int)pdtype);
+                        packet.Write(variable);
+                        switch (pdtype)
+                        {
+                            case PlayerDataTypes.Bool:
+                                packet.Write((bool)obj);
+                                break;
+                            case PlayerDataTypes.Float:
+                                packet.Write((float)obj);
+                                break;
+                            case PlayerDataTypes.Int:
+                                packet.Write((int)obj);
+                                break;
+                            case PlayerDataTypes.Other:
+                                packet.Write((string)obj);
+                                break;
+                            case PlayerDataTypes.String:
+                                packet.Write((string)obj);
+                                break;
+                            case PlayerDataTypes.Vector3:
+                                packet.Write((Vector3)obj);
+                                break;
+                        }
+                        SendTCPData(packet);
+                    }
+                }
+            }
+            catch { }
+        }
+        public static void DownloadSave()
+        {
+            Log("Requesting Host PD");
+            using (Packet packet = new Packet((int)ClientPackets.RequestWorldDownload))
+            {
+                SendTCPData(packet);
+            }
+        }
+
+        public static void DoSyncPins(bool b)
+        {
+            Log("Enable Sync Pins " + b);
+            SessionManager.Instance.SendPins = b;
+            try
+            {
+                if (Client.Instance.isConnected)
+                {
+                    using (Packet packet = new Packet((int)ClientPackets.StartPinSync))
+                    {
+                        packet.Write(b);
+                        SendTCPData(packet);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public static void SendPinPos(Vector3 pos)
+        {
+            try
+            {
+                if (Client.Instance.isConnected)
+                {
+                    using (Packet packet = new Packet((int)ClientPackets.PinPosition))
+                    {
+                        packet.Write(pos);
+                        SendTCPData(packet);
+                    }
+                }
+            }
+            catch { }
+        }
 
         #endregion Player Packets
 
         #region Enemy Packets
 
-        public static void SyncEnemy(byte toClient, string goName)
+        public static void SyncEnemy(byte toClient, string goName, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.SyncEnemy))
             {
                 packet.Write(toClient);
                 packet.Write(goName);
+                packet.Write(id);
 
                 SendTCPData(packet);
             }
         }
         
-        public static void EnemyPosition(Vector3 position)
+        public static void EnemyPosition(byte toClient, Vector3 position, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.EnemyPosition))
             {
+                packet.Write(toClient);
                 packet.Write(position);
-                
+                packet.Write(id);
+
                 SendUDPData(packet);
             }
         }
         
-        public static void EnemyScale(Vector3 scale)
+        public static void EnemyScale(byte toClient, Vector3 scale, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.EnemyScale))
             {
+                packet.Write(toClient);
                 packet.Write(scale);
-                
+                packet.Write(id);
+
                 SendUDPData(packet);
             }
         }
         
-        public static void EnemyAnimation(string clipName)
+        public static void EnemyAnimation(byte toClient, string clipName, int id)
         {
             using (Packet packet = new Packet((int) ClientPackets.EnemyAnimation))
             {
+                packet.Write(toClient);
                 packet.Write(clipName);
                 
                 SendUDPData(packet);

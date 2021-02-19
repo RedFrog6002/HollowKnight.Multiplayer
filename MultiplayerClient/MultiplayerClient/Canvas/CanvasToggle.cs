@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace MultiplayerClient.Canvas
@@ -10,6 +11,7 @@ namespace MultiplayerClient.Canvas
         private readonly GameObject _checkmark;
         private readonly GameObject _label;
         private readonly Toggle _toggle;
+        private UnityAction<bool> toggled;
         private string _toggleName;
         
         private bool _active;
@@ -70,7 +72,24 @@ namespace MultiplayerClient.Canvas
 
             _active = true;
         }
-        
+
+        public void AddToggleEvent(UnityAction<bool> action)
+        {
+            if (ToggleObject != null)
+            {
+                toggled = action;
+                _toggle.onValueChanged.AddListener(Toggled);
+            }
+        }
+
+        private void Toggled(bool toggleValue)
+        {
+            if (toggled != null)
+            {
+                toggled(toggleValue);
+            }
+        }
+
         public void SetActive(bool active)
         {
             if (ToggleObject != null)

@@ -24,6 +24,17 @@ namespace MultiplayerClient
         Team,
         Chat,
         DisconnectPlayer,
+        SyncEnemy,
+        EnemyPosition,
+        EnemyScale,
+        EnemyAnimation,
+        StartEnemySync,
+        PinPosition,
+        StartPinSync,
+        CreatePin,
+        PlayerDataChange,
+        PlayerDataSend,
+        WorldEnabled,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -45,8 +56,22 @@ namespace MultiplayerClient
         EnemyPosition,
         EnemyScale,
         EnemyAnimation,
+        StartPinSync,
+        PinPosition,
+        PlayerDataChange,
+        RequestWorldDownload,
     }
-    
+
+    public enum PlayerDataTypes
+    {
+        Bool = 1,
+        Int,
+        Float,
+        String,
+        Vector3,
+        Other,
+    }
+
     public class Packet : IDisposable
     {
         private List<byte> buffer;

@@ -131,6 +131,20 @@ namespace MultiplayerClient
             On.HeroController.TakeDamage += OnTakeDamage;
             On.HeroController.AddHealth += OnAddHealth;
             On.HeroController.MaxHealth += OnMaxHealth;
+
+            while (GameManager.instance.gameMap == null) yield return null;
+
+            ModCommon.GameObjectExtensions.PrintSceneHierarchyTree(GameManager.instance.gameMap);
+
+            GameObject tmppinprefab = Instantiate(GameManager.instance.gameMap.GetComponent<GameMap>().compassIcon);
+
+            GameObject.DontDestroyOnLoad(tmppinprefab);
+            //tmppinprefab.AddComponent<ClientPin>();
+            tmppinprefab.name = "Client Pin";
+            tmppinprefab.SetActive(false);
+            SessionManager.Instance.pinPrefab = tmppinprefab;
+
+            HeroPin.instance = GameManager.instance.gameMap.GetComponent<GameMap>().compassIcon.AddComponent<HeroPin>();
         }
 
         private void OnTakeDamage(On.HeroController.orig_TakeDamage orig, HeroController hc, GameObject go,

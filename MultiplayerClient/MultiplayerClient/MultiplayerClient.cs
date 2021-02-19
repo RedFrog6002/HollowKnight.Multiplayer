@@ -22,11 +22,13 @@ namespace MultiplayerClient
         
         public static Dictionary<byte[], string> textureCache = new Dictionary<byte[], string>(new ByteArrayComparer());
 
+        public static Dictionary<int, GameObject> Enemies = new Dictionary<int, GameObject>();
+
         public static string CustomKnightDir;
         
         public override string GetVersion()
         {
-            return "0.0.2";
+            return "0.1.7F";
         }
         
         public override List<(string, string)> GetPreloadNames()
@@ -84,34 +86,111 @@ namespace MultiplayerClient
             ModHooks.Instance.ApplicationQuitHook += OnApplicationQuit;
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnSceneChanged;
             On.HeroController.Start += HeroController_Start;
-            On.HeroController.TakeDamage += HeroController_TakeDamage;
+            //On.HeroController.TakeDamage += HeroController_TakeDamage;
             On.HeroController.Update += HeroController_Update;
+            On.DesktopPlatform.WriteSaveSlot += DesktopPlatform_WriteSaveSlot;
+            ModHooks.Instance.SetPlayerBoolHook += Instance_SetPlayerBoolHook;
+            ModHooks.Instance.SetPlayerFloatHook += Instance_SetPlayerFloatHook;
+            ModHooks.Instance.SetPlayerIntHook += Instance_SetPlayerIntHook;
+            ModHooks.Instance.SetPlayerStringHook += Instance_SetPlayerStringHook;
+            ModHooks.Instance.SetPlayerVariableHook += Instance_SetPlayerVariableHook;
+            ModHooks.Instance.SetPlayerVector3Hook += Instance_SetPlayerVector3Hook;
+            ModHooks.Instance.LanguageGetHook += Instance_LanguageGetHook;
+            ClientPin.SetUpStaticHooks();
+        }
+
+        private string Instance_LanguageGetHook(string key, string sheetTitle)
+        {
+            if (key.Contains("Player_Name_"))
+                return key.Substring(12, key.Length - 12);
+            return Language.Language.GetInternal(key, sheetTitle);
+        }
+
+        private void Instance_SetPlayerVector3Hook(string vector3Name, Vector3 value)
+        {
+            ClientSend.SendPDChange(PlayerDataTypes.Vector3, vector3Name, value);
+            PlayerData.instance.SetVector3Internal(vector3Name, value);
+        }
+
+        private object Instance_SetPlayerVariableHook(Type type, string varName, object value)
+        {
+            ClientSend.SendPDChange(PlayerDataTypes.Other, varName, Newtonsoft.Json.JsonConvert.SerializeObject(value));
+            return value;
+        }
+
+        private void Instance_SetPlayerStringHook(string stringName, string value)
+        {
+            ClientSend.SendPDChange(PlayerDataTypes.String, stringName, value);
+            PlayerData.instance.SetStringInternal(stringName, value);
+        }
+
+        private void Instance_SetPlayerIntHook(string intName, int value)
+        {
+            ClientSend.SendPDChange(PlayerDataTypes.Int, intName, value);
+            PlayerData.instance.SetIntInternal(intName, value);
+        }
+
+        private void Instance_SetPlayerFloatHook(string floatName, float value)
+        {
+            ClientSend.SendPDChange(PlayerDataTypes.Float, floatName, value);
+            PlayerData.instance.SetFloatInternal(floatName, value);
+        }
+
+        private void Instance_SetPlayerBoolHook(string originalSet, bool value)
+        {
+            ClientSend.SendPDChange(PlayerDataTypes.Bool, originalSet, value);
+            PlayerData.instance.SetBoolInternal(originalSet, value);
+        }
+
+        private void DesktopPlatform_WriteSaveSlot(On.DesktopPlatform.orig_WriteSaveSlot orig, DesktopPlatform self, int slotIndex, byte[] bytes, Action<bool> callback)
+        {
+            if ((!SessionManager.Instance.WDownloadClientEnabled && !SessionManager.Instance.WSyncClientEnabled) || SessionManager.Instance.OverwriteSave || Client.Instance.isHost)
+            {
+                orig(self, slotIndex, bytes, callback);
+            }
+            callback.Invoke(true);
         }
 
         private void HeroController_Update(On.HeroController.orig_Update orig, HeroController self)
         {
             orig(self);
-            if (SessionManager.Instance.TeamsEnabled)
+            /*if (Input.GetKeyDown(KeyCode.H))
             {
-                switch (Client.Instance.team)
+                PlayerData.instance.SetInt("rancidEggs", 30);
+            }*/
+            try
+            {
+                if (PlayerManager.Instance.CurrentRoomSyncHost)
                 {
-                    case 1:
-                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.red;
-                        break;
-                    case 2:
-                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.blue;
-                        break;
-                    case 3:
-                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.yellow;
-                        break;
-                    case 4:
-                        self.gameObject.GetComponent<global::tk2dSprite>().color = Color.green;
-                        break;
+                    GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 22 || go.layer == 15) as GameObject[];
+                    if (enemies != null)
+                    {
+                        for (int i = 0; i <= enemies.Length; i++)
+                        {
+                            try
+                            {
+                                if (enemies[i] != null && MultiplayerClient.Enemies.Values.Contains(enemies[i]))
+                                {
+                                    var enemy = enemies[i];
+                                    var e = enemy.AddComponent<EnemyTracker>();
+                                    e.enemyId = i;
+                                    MultiplayerClient.Enemies.Add(i, enemy);
+                                }
+                            }
+                            catch (NullReferenceException e)
+                            {
+                                MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                            }
+                        }
+                    }
                 }
             }
+            catch { }
+            if (Input.GetKeyDown(KeyCode.G))
+                ClientPin.CreatePin("Test Name", true, new Vector3(10, 10, SessionManager.Instance.pinPrefab.transform.position.z));
         }
 
-        private void HeroController_TakeDamage(On.HeroController.orig_TakeDamage orig, HeroController self, GameObject go, GlobalEnums.CollisionSide damageSide, int damageAmount, int hazardType)
+        /*private void HeroController_TakeDamage(On.HeroController.orig_TakeDamage orig, HeroController self, GameObject go, GlobalEnums.CollisionSide damageSide, int damageAmount, int hazardType)
         {
             orig(self, go, damageSide, damageAmount, hazardType);
             if (SessionManager.Instance.TeamsEnabled)
@@ -132,7 +211,7 @@ namespace MultiplayerClient
                         break;
                 }
             }
-        }
+        }*/
 
         private void HeroController_Start(On.HeroController.orig_Start orig, HeroController self)
         {
@@ -155,14 +234,58 @@ namespace MultiplayerClient
             chatObj.transform.SetScaleX(0.25f);
             chatObj.transform.SetScaleY(0.25f);
             TextMeshPro chatText = chatObj.AddComponent<TextMeshPro>();
-            chatText.text = "Chat Text";
+            chatText.text = "";
             chatText.alignment = TextAlignmentOptions.Center;
             chatText.fontSize = 24;
             chatText.outlineColor = Color.black;
             chatText.outlineWidth = 0.1f;
             chatObj.AddComponent<KeepWorldScalePositive>();
+            chatObj.AddComponent<HeroChatText>();
             heroname = nameText;
             herochat = chatText;
+        }
+        public class HeroChatText : MonoBehaviour
+        {
+            TMPro.TextMeshPro chattext;
+            Coroutine routine;
+            private void Start()
+            {
+                chattext = GetComponent<TMPro.TextMeshPro>();
+            }
+
+            public void SetChat(string text, TMPro.TextMeshPro textMesh = null)
+            {
+                if (textMesh != null)
+                    chattext = textMesh;
+                if (chattext != null)
+                {
+                    chattext.text = text;
+                    if (routine != null)
+                    {
+                        StopCoroutine(routine);
+                    }
+                    routine = StartCoroutine(ChatRoutine());
+                }
+            }
+
+            public string GetChat()
+            {
+                if (chattext != null)
+                    return chattext.text;
+                else
+                    return "";
+            }
+
+            private IEnumerator ChatRoutine()
+            {
+                chattext.color = Color.white;
+                yield return new WaitForSeconds(1.5f);
+                for (int i = 9; i >= 0; i--)
+                {
+                    chattext.color = new Color(1, 1, 1, i / 10f);
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
         }
         public TMPro.TextMeshPro heroname;
         public TMPro.TextMeshPro herochat;
@@ -220,24 +343,48 @@ namespace MultiplayerClient
         };
         private void OnSceneChanged(Scene prevScene, Scene nextScene)
         {
+            PlayerManager.Instance.activeScene = nextScene.name;
             if (Client.Instance.isConnected)
             {
+                /*bool otherplayer = false;
+                if (SessionManager.Instance.Players.Values != null)
+                {
+                    foreach (PlayerManager pm in SessionManager.Instance.Players.Values)
+                    {
+                        if (pm.activeScene == nextScene.name)
+                            otherplayer = true;
+                    }
+                }*/
+                PlayerManager.Instance.CurrentRoomSyncHost = false;
                 if (!NonGameplayScenes.Contains(nextScene.name))
                 {
                     ClientSend.SceneChanged(nextScene.name);
                 }
-
-                if (Client.Instance.isHost && SessionManager.Instance.Players.Count > 0)
+                Enemies.Clear();
+                /*if (!otherplayer)
                 {
-                    GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                    GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 22 || go.layer == 15) as GameObject[];
                     if (enemies != null)
                     {
-                        foreach (GameObject enemy in enemies)
+                        for (int i = 0; i <= enemies.Length; i++)
                         {
-                            enemy.AddComponent<EnemyTracker>();
+                            try
+                            {
+                                if (enemies[i] != null)
+                                {
+                                    var enemy = enemies[i];
+                                    var e = enemy.AddComponent<EnemyTracker>();
+                                    e.enemyId = i;
+                                    Enemies.Add(i, enemy);
+                                }
+                            }
+                            catch (NullReferenceException e)
+                            {
+                                MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                            }
                         }
                     }
-                }
+                }*/
             }
             
             SessionManager.Instance.DestroyAllPlayers();

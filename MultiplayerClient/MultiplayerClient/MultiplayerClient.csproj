@@ -31,6 +31,10 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Assembly-CSharp.dll</HintPath>
@@ -84,6 +88,7 @@
     <Compile Include="Canvas\GUIController.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientHandle.cs" />
+    <Compile Include="ClientPin.cs" />
     <Compile Include="ClientSend.cs" />
     <Compile Include="DungFluke.cs" />
     <Compile Include="EnemyTracker.cs" />
@@ -112,6 +117,10 @@
     <EmbeddedResource Include="Images\Panel_BG.png" />
     <EmbeddedResource Include="Images\Send_BG.png" />
     <EmbeddedResource Include="Images\Team_BG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Images\Checkmark.png" />
+    <EmbeddedResource Include="Images\Toggle_BG.png" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="@echo on" />

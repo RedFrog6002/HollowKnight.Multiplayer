@@ -17,8 +17,15 @@ namespace MultiplayerClient
         public bool PvPEnabled;
         public bool TeamsEnabled;
         public bool SpectatorMode;
+        public bool WHostEnabled = false;
+        public bool WDownloadClientEnabled = false;
+        public bool WSyncClientEnabled = false;
+        public bool OverwriteSave = false;
+        public bool SendPins = false;
+        public bool RecievePins = false;
 
         public Dictionary<byte, PlayerManager> Players = new Dictionary<byte, PlayerManager>();
+        public Dictionary<byte, ClientPin> Pins = new Dictionary<byte, ClientPin>();
 
         // Loaded texture list, indexed by their hash. A texture can be shared by multiple players.
         public Dictionary<byte[], Texture2D> loadedTextures = new Dictionary<byte[], Texture2D>(new ByteArrayComparer());
@@ -26,6 +33,7 @@ namespace MultiplayerClient
         public byte MaxPlayers = 50;
         
         public GameObject playerPrefab;
+        public GameObject pinPrefab;
 
         private void Awake()
         {
@@ -47,7 +55,7 @@ namespace MultiplayerClient
         /// <param name="scale">The player's starting scale.</param>
         /// <param name="animation">The starting animation of the spawned player.</param>
         /// <param name="charmsData">List of bools containing charms equipped.</param>
-        public void SpawnPlayer(byte id, string username, Vector3 position, Vector3 scale, string animation, List<bool> charmsData, int team)
+        public void SpawnPlayer(byte id, string username, Vector3 position, Vector3 scale, string animation, List<bool> charmsData, int team, string scene, string chat)
         {
             Log("spawnpl");
             // Prevent duplication of same player, leaving one idle
@@ -79,7 +87,7 @@ namespace MultiplayerClient
 
                 player.GetComponent<DamageHero>().enabled = true;
             }
-            if (Instance.TeamsEnabled)
+            /*if (Instance.TeamsEnabled)
             {
                 Log("Enabling Teams Attributes");
                 if (Instance.PvPEnabled)
@@ -116,7 +124,7 @@ namespace MultiplayerClient
                             break;
                     }
                 }
-            }
+            }*/
 
             player.GetComponent<tk2dSpriteAnimator>().Play(animation);
             
@@ -138,7 +146,7 @@ namespace MultiplayerClient
             chatObj.transform.SetScaleX(0.25f);
             chatObj.transform.SetScaleY(0.25f);
             TextMeshPro chatText = chatObj.AddComponent<TextMeshPro>();
-            chatText.text = "Chat Text";
+            chatText.text = chat;
             chatText.alignment = TextAlignmentOptions.Center;
             chatText.fontSize = 24;
             chatText.outlineColor = Color.black;
@@ -150,7 +158,9 @@ namespace MultiplayerClient
             PlayerManager playerManager = player.GetComponent<PlayerManager>();
             playerManager.id = id;
             playerManager.username = username;
-            playerManager.chattext = chatText;
+            //playerManager.chattext = chatText;
+            playerManager.SetChat(chat, chatText);
+            playerManager.activeScene = scene;
             for (int charmNum = 1; charmNum <= 40; charmNum++)
             {
                 playerManager.SetAttr("equippedCharm_" + charmNum, charmsData[charmNum - 1]);
@@ -159,6 +169,16 @@ namespace MultiplayerClient
             Players.Add(id, playerManager);
 
             Log("Done Spawning Player " + id);
+        }
+
+        public void SpawnPin(byte id, string name, bool enabled, Vector3 position)
+        {
+            if (Pins.ContainsKey(id))
+            {
+                Destroy(Pins[id]);
+                Pins.Remove(id);
+            }
+            Pins.Add(id, ClientPin.CreatePin(name, enabled, position));
         }
 
         public void ReloadPlayerTextures(PlayerManager player)
@@ -302,7 +322,7 @@ namespace MultiplayerClient
 
         public void DestroyPlayer(byte playerId)
         {
-            if(Players.ContainsKey(playerId))
+            if (Players.ContainsKey(playerId))
             {
                 Log("Destroying Player " + playerId);
                 Destroy(Players[playerId].gameObject);
@@ -314,12 +334,31 @@ namespace MultiplayerClient
             }
         }
 
+        public void DestroyPin(byte pinId)
+        {
+            if (Pins.ContainsKey(pinId))
+            {
+                Log("Destroying Pin " + pinId);
+                Destroy(Pins[pinId].gameObject);
+                Pins.Remove(pinId);
+            }
+            else
+            {
+                Log("Was asked to destroy pin " + pinId + " even though we don't have it. Ignoring.");
+            }
+        }
+
         public void DestroyAllPlayers()
         {
             List<byte> playerIds = new List<byte>(Players.Keys);
             foreach (byte playerId in playerIds)
             {
                 DestroyPlayer(playerId);
+            }
+            List<byte> pinIds = new List<byte>(Pins.Keys);
+            foreach (byte pinId in pinIds)
+            {
+                DestroyPin(pinId);
             }
         }
 
@@ -360,7 +399,8 @@ namespace MultiplayerClient
         {
             if (Players.ContainsKey(playerId))
             {
-                Players[playerId].chattext.text = message.ToString();
+                //Players[playerId].chattext.text = message.ToString();
+                Players[playerId].SetChat(message.ToString());
                 Log("Chat from " + playerId + ":  " + message);
             }
             else

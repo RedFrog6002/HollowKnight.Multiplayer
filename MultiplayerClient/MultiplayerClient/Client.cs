@@ -334,6 +334,17 @@ namespace MultiplayerClient
                 { (int) ServerPackets.Team, ClientHandle.Team},
                 { (int) ServerPackets.Chat, ClientHandle.Chat},
                 { (int) ServerPackets.DisconnectPlayer, ClientHandle.DisconnectSelf },
+                { (int) ServerPackets.SyncEnemy, ClientHandle.SyncEnemy },
+                { (int) ServerPackets.EnemyPosition, ClientHandle.EnemyPosition },
+                { (int) ServerPackets.EnemyScale, ClientHandle.EnemyScale },
+                { (int) ServerPackets.EnemyAnimation, ClientHandle.EnemyAnimation },
+                { (int) ServerPackets.StartEnemySync, ClientHandle.StartEnemySync },
+                { (int) ServerPackets.PinPosition, ClientHandle.SetPinPosition },
+                { (int) ServerPackets.StartPinSync, ClientHandle.SetPinEnabled },
+                { (int) ServerPackets.CreatePin, ClientHandle.CreatePin },
+                { (int) ServerPackets.PlayerDataChange, ClientHandle.PlayerDataSync },
+                { (int) ServerPackets.PlayerDataSend, ClientHandle.UseHostPD },
+                { (int) ServerPackets.WorldEnabled, ClientHandle.WorldEnabled },
             };
             
             Log("Initialized Packets.");

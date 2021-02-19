@@ -41,8 +41,8 @@ namespace MultiplayerServer.Canvas
             );
             
             Panel.AddText(
-                "Options Text",
-                "Options",
+                "Server Options Text",
+                "Server Options",
                 new Vector2(x, y),
                 new Vector2(panelImg.width, 60), 
                 GUIController.Instance.trajanNormal,
@@ -52,7 +52,7 @@ namespace MultiplayerServer.Canvas
             );
             y += 70;
             
-            _pvpToggle = Panel.AddToggle(
+            Panel.AddToggle(
                 "Toggle PvP",
                 GUIController.Instance.images["Toggle_BG"],
                 GUIController.Instance.images["Checkmark"],
@@ -83,31 +83,17 @@ namespace MultiplayerServer.Canvas
             y += toggleHeight;
 
             Panel.AddToggle(
-                "Toggle Spectator",
+                "Toggle World Sync",
                 GUIController.Instance.images["Toggle_BG"],
                 GUIController.Instance.images["Checkmark"],
                 new Vector2(x, y),
                 new Vector2(panelImg.width, 20),
                 new Vector2(-60, 0),
                 new Rect(0, 0, 150, 20),
-                ToggleSpectator,
+                //ToggleSpectator,
+                ToggleW,
                 GUIController.Instance.trajanNormal,
-                "Spectator Mode",
-                16
-            );
-            y += toggleHeight;
-            
-            Panel.AddToggle(
-                "Toggle Custom Knight",
-                GUIController.Instance.images["Toggle_BG"],
-                GUIController.Instance.images["Checkmark"],
-                new Vector2(x, y),
-                new Vector2(panelImg.width, 20),
-                new Vector2(-60, 0),
-                new Rect(0, 0, 150, 20),
-                ToggleCustomKnight,
-                GUIController.Instance.trajanNormal,
-                "Custom Knight Integration",
+                "World",
                 16
             );
             y += toggleHeight;
@@ -122,7 +108,7 @@ namespace MultiplayerServer.Canvas
         private static void OnPause(On.HeroController.orig_Pause orig, HeroController hc)
         {
             Panel.SetActive(true, false);
-            
+
             orig(hc);
         }
         
@@ -159,7 +145,7 @@ namespace MultiplayerServer.Canvas
 
         private static void ToggleTeams(bool toggleValue)
         {
-            if (toggleValue)
+            /*if (toggleValue)
             {
                 Log("Teams Enabled");
                 ServerSettings.TeamsEnabled = true;
@@ -170,7 +156,7 @@ namespace MultiplayerServer.Canvas
                 Log("Teams Disabled");
                 ServerSettings.TeamsEnabled = false;
                 ServerSend.TeamsEnabled();
-            }
+            }*/
         }
 
         private static void ToggleSpectator(bool toggleValue)
@@ -188,7 +174,7 @@ namespace MultiplayerServer.Canvas
                 //ServerSend.PvPEnabled();
             }
         }
-        
+
         private static void ToggleCustomKnight(bool toggleValue)
         {
             if (toggleValue)
@@ -201,6 +187,16 @@ namespace MultiplayerServer.Canvas
                 Log("Custom Knight Disabled");
                 ServerSettings.CustomKnightIntegration = false;
             }
+        }
+
+        private static void ToggleW(bool toggleValue)
+        {
+            if (toggleValue)
+                Log("World Sync Enabled");
+            else
+                Log("World Sync Disabled");
+            ServerSend.PDEnabled(toggleValue);
+            Server.wenabled = toggleValue;
         }
 
         private static void Log(object message) => Modding.Logger.Log("[Connection Panel] " + message);

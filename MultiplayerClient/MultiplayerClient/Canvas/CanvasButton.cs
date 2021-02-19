@@ -11,15 +11,18 @@ namespace MultiplayerClient.Canvas
         private Button button;
         private UnityAction<string> clicked;
         private string buttonName;
+        private CanvasPanel _canvas;
 
         public bool active;
 
-        public CanvasButton(GameObject parent, string name, Texture2D tex, Vector2 pos, Vector2 size, Rect bgSubSection, Font font = null, string text = null, int fontSize = 13)
+        public CanvasButton(GameObject parent, string name, Texture2D tex, Vector2 pos, Vector2 size, Rect bgSubSection, CanvasPanel panel, Font font = null, string text = null, int fontSize = 13)
         {
             if (size.x == 0 || size.y == 0)
             {
                 size = new Vector2(bgSubSection.width, bgSubSection.height);
             }
+
+            _canvas = panel;
 
             buttonName = name;
 
@@ -79,7 +82,7 @@ namespace MultiplayerClient.Canvas
 
         private void ButtonClicked()
         {
-            if (clicked != null && buttonName != null) clicked(buttonName);
+            if (clicked != null && buttonName != null && active) clicked(buttonName);
         }
 
         public void UpdateText(string text)
@@ -123,9 +126,22 @@ namespace MultiplayerClient.Canvas
             {
                 buttonObj.SetActive(b);
                 active = b;
+                SetTextColor(b ? Color.white : Color.grey);
             }
         }
 
+        public void Remove()
+        {
+            _canvas.RemoveButton(buttonName);
+            if (buttonObj != null)
+            {
+                Object.Destroy(buttonObj);
+            }
+            if (textObj != null)
+            {
+                Object.Destroy(textObj);
+            }
+        }
 
         public void SetRenderIndex(int idx)
         {

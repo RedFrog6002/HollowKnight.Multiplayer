@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using HutongGames.PlayMaker.Actions;
 using ModCommon;
 using ModCommon.Util;
 using UnityEngine;
+using MultiplayerClient.Canvas;
+using System.Reflection;
+using Newtonsoft.Json;
+using Modding.Patches;
 
 namespace MultiplayerClient
 {
@@ -38,6 +43,7 @@ namespace MultiplayerClient
                 Vector3 position = packet.ReadVector3();
                 Vector3 scale = packet.ReadVector3();
                 string animation = packet.ReadString();
+                string scenename = packet.ReadString();
                 List<bool> charmsData = new List<bool>();
                 for (int charmNum = 1; charmNum <= 40; charmNum++)
                 {    
@@ -45,11 +51,14 @@ namespace MultiplayerClient
                 }
                 int team = packet.ReadInt();
 
+                string chat = packet.ReadString();
                 bool pvpEnabled = packet.ReadBool();
                 bool teamsEnabled = packet.ReadBool();
+                bool Wsyncenabled = packet.ReadBool();
                 SessionManager.Instance.EnablePvP(pvpEnabled);
                 SessionManager.Instance.EnableTeams(teamsEnabled);
-                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData, team);
+                SessionManager.Instance.WHostEnabled = Wsyncenabled;
+                SessionManager.Instance.SpawnPlayer(id, username, position, scale, animation, charmsData, team, scenename, chat);
                     
                 var player = SessionManager.Instance.Players[id];
                 /*foreach (TextureType tt in Enum.GetValues(typeof(TextureType)))
@@ -229,8 +238,48 @@ namespace MultiplayerClient
         public static void DestroyPlayer(Packet packet)
         {
             byte clientToDestroy = packet.ReadByte();
-
+            bool amnewhost = packet.ReadBool();
+            Log(amnewhost);
             SessionManager.Instance.DestroyPlayer(clientToDestroy);
+            if (amnewhost && !PlayerManager.Instance.CurrentRoomSyncHost)
+            {
+                Log("clearing enemies");
+                MultiplayerClient.Enemies.Clear();
+                GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                if (enemies != null)
+                {
+                    for (int i = 0; i <= enemies.Length; i++)
+                    {
+                        try
+                        {
+                            if (enemies[i] != null)
+                            {
+                                Log("adding enemy");
+                                var enemy = enemies[i];
+                                var e = enemy.GetOrAddComponent<EnemyTracker>();
+                                e.enemyId = i;
+                                MultiplayerClient.Enemies.Add(i, enemy);
+                            }
+                        }
+                        catch (NullReferenceException e)
+                        {
+                            MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                        }
+                    }
+                }
+            }
+        }
+
+        internal static void WorldEnabled(Packet packet)
+        {
+            bool enabled = packet.ReadBool();
+            SessionManager.Instance.WHostEnabled = enabled;
+            ConnectionPanel.UpdateWPanel(enabled);
+            if (!enabled)
+            {
+                SessionManager.Instance.WDownloadClientEnabled = false;
+                SessionManager.Instance.WSyncClientEnabled = false;
+            }
         }
 
         public static void PvPEnabled(Packet packet)
@@ -313,8 +362,34 @@ namespace MultiplayerClient
         {
             byte id = packet.ReadByte();
             Log($"Player {id} has disconnected from the server.");
-    
+            bool newhost = packet.ReadBool();
             SessionManager.Instance.DestroyPlayer(id);
+            SessionManager.Instance.DestroyPin(id);
+            if (newhost)
+            {
+                MultiplayerClient.Enemies.Clear();
+                GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                if (enemies != null)
+                {
+                    for (int i = 0; i <= enemies.Length; i++)
+                    {
+                        try
+                        {
+                            if (enemies[i] != null)
+                            {
+                                var enemy = enemies[i];
+                                var e = enemy.AddComponent<EnemyTracker>();
+                                e.enemyId = i;
+                                MultiplayerClient.Enemies.Add(i, enemy);
+                            }
+                        }
+                        catch (NullReferenceException e)
+                        {
+                            MultiplayerClient.Instance.Log("Object in enemies found null:  " + i + "    " + e);
+                        }
+                    }
+                }
+            }
         }
 
         public static void DisconnectSelf(Packet packet)
@@ -329,7 +404,7 @@ namespace MultiplayerClient
             int team = packet.ReadInt();
             Log($"Player {id} has teamed.");
 
-            SessionManager.Instance.TeamPlayer(id, team);
+            //SessionManager.Instance.TeamPlayer(id, team);
         }
 
         public static void Chat(Packet packet)
@@ -343,6 +418,201 @@ namespace MultiplayerClient
             SessionManager.Instance.Chat(id, message);
         }
 
+        public static void SyncEnemy(Packet packet)
+        {
+            string goName = packet.ReadString();
+            int id = packet.ReadInt();
+            if (!PlayerManager.Instance.CurrentRoomSyncHost)
+            {
+                GameObject[] enemies = UnityEngine.Object.FindObjectsOfType<GameObject>().Where(go => go.layer == 11 || go.layer == 17) as GameObject[];
+                if (enemies != null)
+                {
+                    try
+                    {
+                        if (enemies[id] != null)
+                        {
+                            var enemy = enemies[id];
+                            if (enemy.name == goName)
+                            {
+                                //var e = enemy.AddComponent<EnemyTracker>();
+                                //e.enemyId = i;
+                                MultiplayerClient.Enemies.Add(id, enemy);
+                            }
+                        }
+                    }
+                    catch (NullReferenceException e)
+                    {
+                        MultiplayerClient.Instance.Log("Object in enemies found null:  " + id + "    " + e);
+                    }
+                }
+            }
+        }
+
+        public static void EnemyPosition(Packet packet)
+        {
+            Vector3 position = packet.ReadVector3();
+            int id = packet.ReadInt();
+
+            MultiplayerClient.Enemies[id].transform.SetPosition3D(position.x, position.y, position.z);
+        }
+
+        public static void EnemyScale(Packet packet)
+        {
+            Vector3 scale = packet.ReadVector3();
+            int id = packet.ReadInt();
+
+            MultiplayerClient.Enemies[id].transform.SetScaleX(scale.x);
+            MultiplayerClient.Enemies[id].transform.SetScaleY(scale.y);
+            MultiplayerClient.Enemies[id].transform.SetScaleZ(scale.z);
+        }
+
+        public static void EnemyAnimation(Packet packet)
+        {
+            string animation = packet.ReadString();
+            int id = packet.ReadInt();
+            if (MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>())
+            {
+                MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>().Stop();
+                MultiplayerClient.Enemies[id].GetComponent<tk2dSpriteAnimator>().Play(animation);
+            }
+        }
+        public static void StartEnemySync(Packet packet)
+        {
+            MultiplayerClient.Enemies.Clear();
+            PlayerManager.Instance.CurrentRoomSyncHost = true;
+        }
+        public static void PlayerDataSync(Packet packet)
+        {
+            if (PlayerData.instance != null && SessionManager.Instance.WSyncClientEnabled)
+            {
+                PlayerDataTypes pdtype = (PlayerDataTypes)packet.ReadInt();
+                string variable = packet.ReadString();
+                bool dosync = true;
+                foreach((string s, ExclusionType exclusiontype, bool skip) in SAVEEXCLUDE)
+                {
+                    dosync = !(exclusiontype == ExclusionType.Contains ? variable.ToLower().Contains(s) : variable.ToLower() == s);
+                    if (!dosync)
+                    {
+                        if (skip)
+                            dosync = true;
+                        break;
+                    }
+                }
+                Log("PlayerData Sync " + dosync + " " + variable);
+                if (dosync)
+                {
+                    switch (pdtype)
+                    {
+                        case PlayerDataTypes.Bool:
+                            bool b = packet.ReadBool();
+                            Modding.ReflectionHelper.SetAttrSafe<PlayerData, bool>(PlayerData.instance, variable, b);
+                            break;
+                        case PlayerDataTypes.Float:
+                            float f = packet.ReadFloat();
+                            Modding.ReflectionHelper.SetAttrSafe<PlayerData, float>(PlayerData.instance, variable, f);
+                            break;
+                        case PlayerDataTypes.Int:
+                            int i = packet.ReadInt();
+                            Modding.ReflectionHelper.SetAttrSafe<PlayerData, int>(PlayerData.instance, variable, i);
+                            break;
+                        case PlayerDataTypes.Other:
+                            string json = packet.ReadString();
+                            foreach (FieldInfo fi in typeof(PlayerData).GetFields())
+                            {
+                                if (fi.Name == variable)
+                                {
+                                    object obj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                                    fi.SetValue(PlayerData.instance, obj);
+                                }
+                            }
+                            break;
+                        case PlayerDataTypes.String:
+                            string s = packet.ReadString();
+                            Modding.ReflectionHelper.SetAttrSafe<PlayerData, string>(PlayerData.instance, variable, s);
+                            break;
+                        case PlayerDataTypes.Vector3:
+                            Vector3 v = packet.ReadVector3();
+                            Modding.ReflectionHelper.SetAttrSafe<PlayerData, Vector3>(PlayerData.instance, variable, v);
+                            break;
+                    }
+                }
+            }
+        }
+        public static void UseHostPD(Packet packet)
+        {
+            Log("Downloading Host PD");
+            string json = packet.ReadString();
+            PlayerData hostdata = JsonConvert.DeserializeObject<PlayerData>(json, new JsonSerializerSettings()
+            {
+                ContractResolver = ShouldSerializeContractResolver.Instance,
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            foreach (FieldInfo fi in typeof(PlayerData).GetFields())
+            {
+                if (!fi.IsStatic)
+                {
+                    bool dosync = true;
+                    foreach ((string s, ExclusionType exclusiontype, bool skip) in SAVEEXCLUDE)
+                    {
+                        dosync = !(exclusiontype == ExclusionType.Contains ? fi.Name.ToLower().Contains(s) : fi.Name.ToLower() == s);
+                        if (!dosync)
+                        {
+                            if (skip)
+                                dosync = true;
+                            break;
+                        }
+                    }
+                    if (dosync)
+                        fi.SetValue(PlayerData.instance, fi.GetValue(hostdata));
+                }
+            }
+        }
+
+        public static void SetPinPosition(Packet packet)
+        {
+            byte id = packet.ReadByte();
+            Vector3 position = packet.ReadVector3();
+            SessionManager.Instance.Pins[id].Position = position;
+        }
+
+        public static void SetPinEnabled(Packet packet)
+        {
+            byte id = packet.ReadByte();
+            bool enabled = packet.ReadBool();
+            SessionManager.Instance.Pins[id].isEnabled = enabled;
+        }
+
+        public static void CreatePin(Packet packet)
+        {
+            byte id = packet.ReadByte();
+            string name = packet.ReadString();
+            bool enabled = packet.ReadBool();
+            Vector3 position = packet.ReadVector3();
+            SessionManager.Instance.SpawnPin(id, name, enabled, position);
+        }
+
+        private static List<(string, ExclusionType, bool)> SAVEEXCLUDE = new List<(string, ExclusionType, bool)>()
+        {
+            ("gotCharm", ExclusionType.Equles, true),
+            ("charm", ExclusionType.Contains, false),
+            ("scene", ExclusionType.Contains, false),
+            ("gmap", ExclusionType.Contains, false),
+            ("pause", ExclusionType.Contains, false),
+            ("invincible", ExclusionType.Contains, false),
+            ("bench", ExclusionType.Contains, false),
+            ("respawn", ExclusionType.Contains, false),
+            ("mpcharge", ExclusionType.Equles, false),
+            ("mpreserve", ExclusionType.Contains, false),
+            ("fragment", ExclusionType.Contains, false),
+            ("geo", ExclusionType.Contains, false),
+            ("dark", ExclusionType.Contains, false),
+        };
+
+        enum ExclusionType
+        {
+            Contains,
+            Equles,
+        }
         private static void Log(object message) => Modding.Logger.Log("[Client Handle] " + message);
     }
 }

@@ -5,6 +5,7 @@ using ModCommon;
 using ModCommon.Util;
 using UnityEngine;
 using TMPro;
+using System.Collections;
 
 namespace MultiplayerClient
 {
@@ -31,10 +32,12 @@ namespace MultiplayerClient
         public byte id;
         public string username;
         public int team = 0;
-        public TMPro.TextMeshPro chattext;
 
-        
-        public static string activeScene;
+        private TMPro.TextMeshPro chattext;
+        private Coroutine routine;
+
+        public string activeScene;
+        public bool CurrentRoomSyncHost;
         
         public bool equippedCharm_1;
         public bool equippedCharm_2;
@@ -87,6 +90,40 @@ namespace MultiplayerClient
         private void Awake()
         {
             Instance = this;
+        }
+
+        public void SetChat(string text, TMPro.TextMeshPro textMesh = null)
+        {
+            if (textMesh != null)
+                chattext = textMesh;
+            if (chattext != null)
+            {
+                chattext.text = text;
+                if (routine != null)
+                {
+                    StopCoroutine(routine);
+                }
+                routine = StartCoroutine(ChatRoutine());
+            }
+        }
+
+        public string GetChat()
+        {
+            if (chattext != null)
+                return chattext.text;
+            else
+                return "";
+        }
+
+        private IEnumerator ChatRoutine()
+        {
+            chattext.color = Color.white;
+            yield return new WaitForSeconds(1.5f);
+            for (int i = 9; i >= 0; i--)
+            {
+                chattext.color = new Color(1, 1, 1, i / 10f);
+                yield return new WaitForSeconds(0.1f);
+            }
         }
         
         private void Log(object message) => Modding.Logger.Log("[Player Manager] " + message);

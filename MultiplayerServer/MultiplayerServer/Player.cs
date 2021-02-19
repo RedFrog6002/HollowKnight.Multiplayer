@@ -12,12 +12,17 @@ namespace MultiplayerServer
     {
         public byte id;
         public string username;
+        public string chat;
         public string animation;
         public string activeScene;
+        public bool CurrentRoomSyncHost;
         public Vector3 position;
         public Vector3 scale;
         public bool isHost;
         public int team;
+
+        public bool pinenabled;
+        public Vector3 pinposition;
         
         public bool equippedCharm_1;
         public bool equippedCharm_2;
@@ -66,16 +71,19 @@ namespace MultiplayerServer
 
         public List<byte[]> textureHashes = new List<byte[]>();
         
-        public void Initialize(byte id, string username, string animation, int health, int maxHealth, int healthBlue, bool isHost, int team)
+        public void Initialize(byte id, string username, string animation, int health, int maxHealth, int healthBlue, bool isHost, int team, string chat, bool pinenabled, Vector3 pinposition)
         {
             this.id = id;
             this.username = username;
+            this.chat = chat;
             this.animation = animation;
             this.health = health;
             this.maxHealth = maxHealth;
             this.healthBlue = healthBlue;
             this.isHost = isHost;
             this.team = team;
+            this.pinenabled = pinenabled;
+            this.pinposition = pinposition;
         }
 
         public void SetPosition(Vector3 position)

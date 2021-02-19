@@ -1,13 +1,15 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace MultiplayerClient
+namespace MultiplayerServer
 {
     public class EnemyTracker : MonoBehaviour
     {
+        public List<byte> playerIds;
+        public int enemyId;
+
         private tk2dSpriteAnimator _anim;
         private HealthManager _hm;
-        public int enemyId;
 
         private void Awake()
         {
@@ -17,11 +19,6 @@ namespace MultiplayerClient
 
         private void Start()
         {
-            foreach (byte toClient in SessionManager.Instance.Players.Keys)
-            {
-                ClientSend.SyncEnemy(toClient, gameObject.name, enemyId);
-            }
-
             if (_anim != null)
             {
                 foreach (tk2dSpriteAnimationClip clip in _anim.Library.clips)
@@ -34,7 +31,7 @@ namespace MultiplayerClient
                         clip.frames[0] = frame0;
                     }
                 }
-                
+
                 _anim.AnimationEventTriggered = AnimationEventDelegate;
             }
 
@@ -43,7 +40,7 @@ namespace MultiplayerClient
                 _hm.hp *= 2;
             }
         }
-        
+
         private Vector3 _storedPosition = Vector3.zero;
         private Vector3 _storedScale = Vector3.zero;
         private void FixedUpdate()
@@ -51,20 +48,20 @@ namespace MultiplayerClient
             Vector3 pos = transform.position;
             if (pos != _storedPosition)
             {
-                foreach (byte player in SessionManager.Instance.Players.Keys)
-                    ClientSend.EnemyPosition(player, pos, enemyId);
+                foreach (byte player in playerIds)
+                    ServerSend.EnemyPosition(player, pos, enemyId);
                 _storedPosition = pos;
             }
 
             Vector3 scale = transform.localScale;
             if (scale != _storedScale)
             {
-                foreach (byte player in SessionManager.Instance.Players.Keys)
-                    ClientSend.EnemyScale(player, scale, enemyId);
+                foreach (byte player in playerIds)
+                    ServerSend.EnemyScale(player, scale, enemyId);
                 _storedScale = scale;
             }
         }
-        
+
         private string _storedClip;
         private void AnimationEventDelegate(tk2dSpriteAnimator anim, tk2dSpriteAnimationClip clip, int frameNum)
         {
@@ -76,8 +73,9 @@ namespace MultiplayerClient
                 tk2dSpriteAnimationFrame frame = clip.GetFrame(frameNum);
 
                 string clipName = frame.eventInfo;
-                foreach (byte player in SessionManager.Instance.Players.Keys)
-                    ClientSend.EnemyAnimation(player, clipName, enemyId);
+                //ServerSend.EnemyAnimation(clipName);
+                foreach (byte player in playerIds)
+                    ServerSend.EnemyAnimation(player, clipName, enemyId);
             }
         }
     }

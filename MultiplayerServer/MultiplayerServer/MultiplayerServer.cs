@@ -13,7 +13,7 @@ namespace MultiplayerServer
 
         public override string GetVersion()
         {
-            return "0.0.2";
+            return "0.1.7";
         } 
 
         public override void Initialize()

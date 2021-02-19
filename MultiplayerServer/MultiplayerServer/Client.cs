@@ -230,14 +230,15 @@ namespace MultiplayerServer
         /// <param name="maxHealth">The maximum health of the new player.</param>
         /// <param name="healthBlue">The blue health of the new player.</param>
         /// <param name="charmsData">The equipped charms of the new player.</param>
-        public void SendIntoGame(string username, Vector3 position, Vector3 scale, string animation, int health, int maxHealth, int healthBlue, List<bool> charmsData, bool isHost, int team)
+        public void SendIntoGame(string username, Vector3 position, Vector3 scale, string animation, int health, int maxHealth, int healthBlue, List<bool> charmsData, bool isHost, int team, string chat, bool pinenabled, Vector3 pinposition)
         {
             player = NetworkManager.Instance.InstantiatePlayer(position, scale);
-            player.Initialize(id, username, animation, health, maxHealth, healthBlue, isHost, team);
+            player.Initialize(id, username, animation, health, maxHealth, healthBlue, isHost, team, chat, pinenabled, pinposition);
 
             for (int charmNum = 1; charmNum <= 40; charmNum++)
             {
                 player.SetAttr("equippedCharm_" + charmNum, charmsData[charmNum - 1]);
+                Log(username + " Equipped Charm " + charmNum + " " + charmsData[charmNum - 1]);
             }
 
             UnityEngine.Object.DontDestroyOnLoad(player);
@@ -247,7 +248,7 @@ namespace MultiplayerServer
         public void Disconnect()
         {
             Log($"{tcp.socket.Client.RemoteEndPoint} has disconnected from the server.");
-
+            string s = player.activeScene;
             ThreadManager.ExecuteOnMainThread(() =>
             {
                 UnityEngine.Object.Destroy(player.gameObject);
@@ -257,7 +258,7 @@ namespace MultiplayerServer
             tcp.Disconnect();
             udp.Disconnect();
             
-            ServerSend.PlayerDisconnected(id);
+            ServerSend.PlayerDisconnected(id, s);
             Log("Disconnected on Server Side.");
         }
 
