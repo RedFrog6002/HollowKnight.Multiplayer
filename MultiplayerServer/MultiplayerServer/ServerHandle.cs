@@ -60,12 +60,16 @@ namespace MultiplayerServer
             }
 
             Server.clients[fromClient].SendIntoGame(username, position, scale, currentClip, health, maxHealth, healthBlue, charmsData, isHost, team, chat, pinenabled, pinposition);
-
-            foreach (Client client in Server.clients.Values)
-            {
-                ServerSend.CreatePin(client.id, fromClient);
+            try{
+                foreach (Client client in Server.clients.Values)
+                {
+                    ServerSend.CreatePin(client.id, fromClient);
+                }
+                ServerSend.CreatePin(fromClient);
             }
-            ServerSend.CreatePin(fromClient);
+            catch (Exception e) {
+                Log("Server could not create pin :" + e.Message + " Object: " + e.Source);            
+            }
 
             /*for (int i = 0; i < Enum.GetNames(typeof(TextureType)).Length; i++)
             {
